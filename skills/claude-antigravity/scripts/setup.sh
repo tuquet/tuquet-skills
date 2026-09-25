@@ -1,0 +1,266 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# One-Click Setup Script for Claude Code + Antigravity (claude-agy)
+# Can be run on any fresh Ubuntu/Debian/Linux machine
+# ==============================================================================
+set -e
+
+INSTALL_DIR="${TARGET_DIR:-$HOME/claude-agy}"
+CPA_VERSION="7.3.17"
+SYMLINK_PATH="/usr/local/bin/claude-agy"
+BASHRC="$HOME/.bashrc"
+
+GREEN="\033[0;32m"
+BLUE="\033[0;34m"
+YELLOW="\033[1;33m"
+RED="\033[0;31m"
+NC="\033[0m"
+
+echo -e "${BLUE}==>${NC} Cài đặt Claude-Agy vào: ${GREEN}$INSTALL_DIR${NC}"
+
+# 1. Tạo các thư mục
+mkdir -p "$INSTALL_DIR"/{bin,config,data,logs,scripts}
+
+# 2. Cài đặt các gói phụ thuộc cơ bản
+if command -v apt-get >/dev/null 2>&1; then
+    sudo apt-get update -qq && sudo apt-get install -y -qq curl tar netcat-openbsd python3
+fi
+
+# 3. Cài đặt Claude Code CLI nếu chưa có
+if ! command -v claude >/dev/null 2>&1; then
+    echo -e "${BLUE}==>${NC} Cài đặt @anthropic-ai/claude-code..."
+    npm install -g @anthropic-ai/claude-code
+fi
+
+# 4. Tải binary cli-proxy-api
+PROXY_BIN="$INSTALL_DIR/bin/cli-proxy-api"
+if [ ! -f "$PROXY_BIN" ]; then
+    ARCH=$(uname -m)
+    case "$ARCH" in
+        x86_64)  CPA_ARCH="linux_amd64" ;;
+        aarch64) CPA_ARCH="linux_aarch64" ;;
+        arm64)   CPA_ARCH="linux_aarch64" ;;
+        *) echo -e "${RED}[ERROR] Kiến trúc $ARCH chưa được hỗ trợ.${NC}"; exit 1 ;;
+    esac
+    echo -e "${BLUE}==>${NC} Tải CLIProxyAPI v${CPA_VERSION}..."
+    curl -sSL "https://github.com/router-for-me/CLIProxyAPI/releases/download/v${CPA_VERSION}/CLIProxyAPI_${CPA_VERSION}_${CPA_ARCH}.tar.gz" | tar -xz -C /tmp
+    mv /tmp/cli-proxy-api "$PROXY_BIN"
+    chmod +x "$PROXY_BIN"
+fi
+
+# 5. Khởi tạo config/config.yaml
+cat << EOF > "$INSTALL_DIR/config/config.yaml"
+host: "127.0.0.1"
+port: 8318
+auth-dir: "$INSTALL_DIR/data"
+api-keys:
+  - "sk-personal-claude-token"
+remote-management:
+  disable-control-panel: true
+quota-exceeded:
+  switch-project: true
+  antigravity-credits: true
+debug: false
+
+antigravity:
+  sensitive-words:
+    - "system-conventions"
+    - "system_conventions"
+    - "system-directive"
+    - "system_directive"
+    - "Claude Agent SDK"
+    - "Claude Code"
+    - "Anthropic"
+    - "claude"
+    - "API"
+    - "proxy"
+
+oauth-model-alias:
+  antigravity:
+    - name: "gemini-3.8-flash-high"
+      alias: "3.8"
+    - name: "gemini-3.8-flash-high"
+      alias: "3.8-high"
+    - name: "gemini-3.7-flash-high"
+      alias: "3.7"
+    - name: "claude-opus-4-6-thinking"
+      alias: "opus"
+    - name: "claude-sonnet-4-6"
+      alias: "sonnet"
+    - name: "claude-opus-4-6-thinking"
+      alias: "claude-opus-4-8"
+    - name: "claude-opus-4-6-thinking"
+      alias: "claude-opus-4-7"
+    - name: "claude-opus-4-6-thinking"
+      alias: "claude-opus-4-6"
+    - name: "claude-sonnet-4-6"
+      alias: "claude-sonnet-5"
+    - name: "claude-sonnet-4-6"
+      alias: "claude-sonnet-4-5"
+    - name: "claude-sonnet-4-6"
+      alias: "claude-3-7-sonnet-20250219"
+    - name: "claude-sonnet-4-6"
+      alias: "claude-3-7-sonnet"
+    - name: "claude-sonnet-4-6"
+      alias: "claude-3-5-sonnet-20241022"
+    - name: "gemini-3.8-flash-high"
+      alias: "claude-3-5-haiku-20241022"
+    - name: "gemini-3.8-flash-high"
+      alias: "claude-haiku-4-5"
+EOF
+
+# 6. Khởi tạo config/settings.env
+cat << 'EOF' > "$INSTALL_DIR/config/settings.env"
+PORT=8318
+AUTO_BYPASS_PERMISSIONS=true
+DEFAULT_MODEL=""
+EOF
+
+# 7. Khởi tạo scripts/sync-token.py
+cat << 'EOF' > "$INSTALL_DIR/scripts/sync-token.py"
+#!/usr/bin/env python3
+import json, os, sys, time, base64
+
+def sync_antigravity_token(app_dir):
+    gemini_token_path = os.path.expanduser("~/.gemini/antigravity-cli/antigravity-oauth-token")
+    auth_file = os.path.join(app_dir, "data", "antigravity-auth.json")
+    if not os.path.exists(gemini_token_path):
+        return False, "Không tìm thấy token Antigravity tại ~/.gemini"
+    try:
+        with open(gemini_token_path, "r", encoding="utf-8") as f:
+            gemini_data = json.load(f)
+        tok = gemini_data.get("token", {})
+        id_tok = gemini_data.get("id_token", "")
+        email = "user@antigravity"
+        if id_tok and "." in id_tok:
+            try:
+                p = json.loads(base64.urlsafe_b64decode(id_tok.split(".")[1] + "==").decode("utf-8"))
+                email = p.get("email", email)
+            except Exception:
+                pass
+        auth_payload = {
+            "type": "antigravity",
+            "email": email,
+            "access_token": tok.get("access_token", ""),
+            "refresh_token": tok.get("refresh_token", ""),
+            "expires_in": 3600,
+            "timestamp": int(time.time() * 1000),
+            "expired": tok.get("expiry", "")
+        }
+        with open(auth_file, "w", encoding="utf-8") as f:
+            json.dump(auth_payload, f, indent=2)
+        return True, email
+    except Exception as e:
+        return False, str(e)
+
+def setup_trust():
+    p = os.path.expanduser("~/.claude.json")
+    try:
+        data = {}
+        if os.path.exists(p):
+            with open(p, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        data["bypassPermissionsModeAccepted"] = True
+        data["hasCompletedOnboarding"] = True
+        for proj in data.get("projects", {}).values():
+            if isinstance(proj, dict): proj["hasTrustDialogAccepted"] = True
+        with open(p, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+    except Exception:
+        pass
+
+if __name__ == "__main__":
+    setup_trust()
+    app = sys.argv[1] if len(sys.argv) > 1 else os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    ok, msg = sync_antigravity_token(app)
+    if ok: print(f"[OK] Token đồng bộ: {msg}")
+    else: print(f"[INFO] {msg}")
+EOF
+chmod +x "$INSTALL_DIR/scripts/sync-token.py"
+
+# 8. Khởi tạo bin/claude-agy
+cat << 'EOF' > "$INSTALL_DIR/bin/claude-agy"
+#!/usr/bin/env bash
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do
+  DIR="$(cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd)"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+APP_DIR="$(cd -P "$(dirname "$SOURCE")/.." >/dev/null 2>&1 && pwd)"
+
+PORT=8318
+AUTO_BYPASS_PERMISSIONS=true
+DEFAULT_MODEL=""
+[ -f "$APP_DIR/config/settings.env" ] && source "$APP_DIR/config/settings.env"
+
+mkdir -p "$APP_DIR/logs"
+python3 "$APP_DIR/scripts/sync-token.py" "$APP_DIR" >/dev/null 2>&1 || true
+
+ENABLE_BYPASS=false
+[ "$AUTO_BYPASS_PERMISSIONS" = "true" ] && ENABLE_BYPASS=true
+
+MODEL_SPECIFIED=false
+ARGS=()
+for arg in "$@"; do
+  case "$arg" in
+    --bypass|-y) ENABLE_BYPASS=true ;;
+    --no-bypass) ENABLE_BYPASS=false ;;
+    --dangerously-skip-permissions) ENABLE_BYPASS=true ;;
+    --model|-m|--model=*) MODEL_SPECIFIED=true; ARGS+=("$arg") ;;
+    *) ARGS+=("$arg") ;;
+  esac
+done
+
+if [ "$MODEL_SPECIFIED" = false ] && [ -n "$DEFAULT_MODEL" ]; then
+  ARGS=("--model" "$DEFAULT_MODEL" "${ARGS[@]}")
+fi
+
+if [ "$ENABLE_BYPASS" = true ]; then
+  export IS_SANDBOX="1"
+  HAS_FLAG=false
+  for a in "${ARGS[@]}"; do [ "$a" = "--dangerously-skip-permissions" ] && HAS_FLAG=true && break; done
+  [ "$HAS_FLAG" = false ] && ARGS=("--dangerously-skip-permissions" "${ARGS[@]}")
+fi
+
+PROXY_PID=""
+STARTED_PROXY=false
+if ! nc -z 127.0.0.1 "$PORT" 2>/dev/null; then
+  "$APP_DIR/bin/cli-proxy-api" --config "$APP_DIR/config/config.yaml" > "$APP_DIR/logs/proxy.log" 2>&1 &
+  PROXY_PID=$!
+  STARTED_PROXY=true
+  trap 'if [ "$STARTED_PROXY" = true ] && [ -n "$PROXY_PID" ]; then kill "$PROXY_PID" 2>/dev/null; wait "$PROXY_PID" 2>/dev/null || true; fi' EXIT INT TERM
+  local_retries=0
+  while ! nc -z 127.0.0.1 "$PORT" 2>/dev/null; do
+    sleep 0.2
+    local_retries=$((local_retries + 1))
+    if [ $local_retries -gt 15 ]; then
+      echo ">> [LỖI] Không thể khởi động Proxy. Log: $APP_DIR/logs/proxy.log"
+      exit 1
+    fi
+  done
+fi
+
+ANTHROPIC_BASE_URL="http://127.0.0.1:$PORT" \
+ANTHROPIC_AUTH_TOKEN="sk-personal-claude-token" \
+CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY="1" \
+claude "${ARGS[@]}"
+EXIT_CODE=$?
+
+if [ "$STARTED_PROXY" = true ] && [ -n "$PROXY_PID" ]; then
+  kill "$PROXY_PID" 2>/dev/null
+  wait "$PROXY_PID" 2>/dev/null || true
+fi
+trap - EXIT INT TERM
+exit $EXIT_CODE
+EOF
+chmod +x "$INSTALL_DIR/bin/claude-agy"
+
+# 9. Tạo symlink toàn hệ thống
+sudo ln -sf "$INSTALL_DIR/bin/claude-agy" "$SYMLINK_PATH" 2>/dev/null || ln -sf "$INSTALL_DIR/bin/claude-agy" "$SYMLINK_PATH"
+
+# 10. Chạy đồng bộ token lần đầu
+python3 "$INSTALL_DIR/scripts/sync-token.py" "$INSTALL_DIR"
+
+echo -e "\n${GREEN}🎉 Hoàn tất cài đặt Claude-Agy!${NC}"
+echo -e "Lệnh khả dụng: ${GREEN}claude-agy${NC}"
