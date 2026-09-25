@@ -1,143 +1,143 @@
 ---
 name: claude-agy
 description: >-
-  Comprehensive guide, cheatsheet, and automated runbook for configuring and running Anthropic's Claude Code CLI with Google Antigravity OAuth (claude-agy) on Linux and Windows, bypassing Linux root permission checks (IS_SANDBOX=1), avoiding 429 RESOURCE_EXHAUSTED filters, and managing proxy lifecycles on fresh machines.
+  Comprehensive guide, cheatsheet, and automated runbook for configuring and running Anthropic's Claude Code CLI with Google Antigravity OAuth (claude-agy) on Linux, macOS, and Windows, bypassing Linux root permission checks (IS_SANDBOX=1), avoiding 429 RESOURCE_EXHAUSTED filters, and managing proxy lifecycles on fresh machines.
 ---
 
 # Claude Code + Antigravity OAuth Integration (`claude-agy`)
 
-Kỹ năng này hướng dẫn toàn bộ quy trình thiết lập tự động, vận hành và quản lý khi chạy **Claude Code CLI** bằng tài khoản **Google Antigravity OAuth** thay vì dùng token trả phí trực tiếp của Anthropic.
+This skill provides a complete automated guide, operations runbook, and architectural reference for running **Anthropic's Claude Code CLI** powered by **Google Antigravity OAuth** quotas instead of direct paid Anthropic API keys.
 
-Hỗ trợ đầy đủ cả máy chủ **Linux** (Ubuntu/Debian/WSL) và máy trạm **Windows 10/11** mới tinh.
+Fully supports **Linux** (Ubuntu/Debian/WSL), **macOS**, and fresh **Windows 10/11** workstations.
 
 ---
 
-## 🏗️ Kiến trúc & Luồng hoạt động
+## 🏗️ Architecture & Execution Flow
 
 ```mermaid
 flowchart TD
-    A["Gõ lệnh claude-agy [args]"] --> B{"Proxy cổng 8318<br/>đang chạy chưa?"}
-    B -- "Chưa" --> C["Khởi động ngầm cli-proxy-api<br/>(Lưu PID)"]
-    B -- "Đã chạy" --> D["Khởi chạy Claude Code CLI<br/>(Gateway Model Discovery = 1)"]
+    A["Run claude-agy [args]"] --> B{"Is port 8318<br/>already open?"}
+    B -- "No" --> C["Spawn cli-proxy-api in background<br/>(Track PID)"]
+    B -- "Yes" --> D["Launch Claude Code CLI<br/>(Gateway Model Discovery = 1)"]
     C --> D
-    D --> E["Claude Code gửi request tới<br/>http://127.0.0.1:8318"]
-    E --> F["cli-proxy-api lọc sensitive words<br/>+ định tuyến Antigravity"]
-    F --> G["Google Antigravity Backend<br/>(OAuth Quota Doanh nghiệp)"]
+    D --> E["Claude Code sends requests to<br/>http://127.0.0.1:8318"]
+    E --> F["cli-proxy-api filters sensitive words<br/>+ routes to Antigravity"]
+    F --> G["Google Antigravity Backend<br/>(Enterprise OAuth Quota)"]
     G --> F
     F --> D
-    D --> H["Người dùng thoát Claude<br/>(/exit hoặc Ctrl+C)"]
-    H --> I["Auto-kill PID Proxy khi thoát<br/>(Đóng cổng 8318, 0MB RAM)"]
+    D --> H["User exits Claude<br/>(/exit or Ctrl+C)"]
+    H --> I["Auto-terminate Proxy PID on exit<br/>(Free port 8318, 0MB residual RAM)"]
 ```
 
 ---
 
-## 💡 Triết lý Thiết kế: KISS & YAGNI
+## 💡 Design Philosophy: KISS & YAGNI
 
-Hệ thống được thiết kế tinh gọn theo nguyên tắc **KISS** (Keep It Simple, Stupid) và **YAGNI** (You Aren't Gonna Need It):
-1. **Không cấu hình alias dư thừa**: Thay vì duy trì danh sách hàng chục alias ảo dễ lỗi thời, hệ thống kích hoạt cờ `CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY="1"`.
-2. **Dynamic Model Discovery (`/model`)**: Claude Code tự động truy vấn danh mục model thực tế từ proxy (`GET /v1/models`). Trong giao diện tương tác, kỹ sư chỉ cần gõ `/model` để xem và chọn trực quan giữa `claude-sonnet-4-6`, `claude-opus-4-6-thinking`, `gemini-3.8-flash-high`, v.v.
-3. **Cấu hình tối giản**: File `config.yaml` chỉ giữ lại các thành phần cốt lõi: cổng lắng nghe, thư mục auth, và bộ lọc từ khóa nhạy cảm `antigravity.sensitive-words` để ngăn chặn triệt để lỗi 429 quota từ Google Cloud.
+The system is designed strictly following **KISS** (Keep It Simple, Stupid) and **YAGNI** (You Aren't Gonna Need It) principles:
+1. **Zero Redundant Aliases**: Instead of maintaining fragile static model alias tables, the system enables `CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY="1"`.
+2. **Dynamic Model Discovery (`/model`)**: Claude Code dynamically queries the upstream proxy (`GET /v1/models`). In the chat interface, engineers simply type `/model` to visually select between `claude-sonnet-4-6`, `claude-opus-4-6-thinking`, `gemini-3.8-flash-high`, and other models.
+3. **Radical Minimalist Configuration**: The `config.yaml` file maintains only core settings: listening port, auth directory, and the `antigravity.sensitive-words` filter to completely prevent Google Cloud 429 quota exhaustion errors.
 
 ---
 
-## 🚀 Cài đặt Nhanh 1 Lệnh (One-Click Setup)
+## 🚀 One-Click Installation
 
-### 🌟 Universal 1-File Setup (Khuyên Dùng: Windows, Linux, macOS)
-Sử dụng script Node.js thuần (Zero External Dependencies) để cài đặt đồng nhất trên mọi nền tảng:
+### 🌟 Universal 1-File Setup (Recommended: Windows, Linux, macOS)
+Use the pure Node.js installer (Zero External Dependencies) for consistent installation across all platforms:
 
 ```bash
-# Chạy trực tiếp từ repository
+# Run directly from repository
 node skills/claude-agy/scripts/setup.mjs
 ```
 
-Hoặc chạy trực tiếp qua mạng bằng 1 dòng lệnh duy nhất:
+Or run directly via network with a single command:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/tuquet/tuquet-skills/main/skills/claude-agy/scripts/setup.mjs | node
 ```
 
-*Đặc điểm Universal Setup:*
-- **100% Native Node.js**: Tương thích hoàn toàn Windows 10/11, macOS, Linux.
-- **Dynamic Multi-Source Token Resolver**: Tự động nhận diện token từ cả Antigravity CLI (`antigravity-cli`), Antigravity IDE (`jetski-standalone-oauth-token`), và OAuth credentials (`oauth_creds.json`).
-- **Resilient Proxy & Gateway Support**: Tải binary qua `curl` / `powershell` tự động vượt qua Corporate Web Gateway & Proxy mạng doanh nghiệp.
-- **Tự động cấu hình Launcher & PATH**: Sinh binary/script launcher và phơi ra biến môi trường PATH toàn cục.
+*Universal Setup Highlights:*
+- **100% Native Node.js**: Fully compatible with Windows 10/11, macOS, and Linux.
+- **Dynamic Multi-Source Token Resolver**: Automatically detects OAuth tokens from Antigravity CLI (`antigravity-cli`), Antigravity IDE (`jetski-standalone-oauth-token`), and OAuth credentials (`oauth_creds.json`).
+- **Resilient Proxy & Gateway Support**: Auto-detects corporate firewalls and corporate web gateways.
+- **Automated Launcher & PATH Configuration**: Generates launcher binaries and scripts and exposes them globally on system PATH.
 
 ---
 
-### 🪟 Trên Windows (Cài Đặt Qua Scoop - Khuyên Dùng Cho Developer)
-Nếu máy đã cài Scoop:
+### 🪟 Windows (Scoop Package Manager - Recommended for Windows Developers)
+If Scoop is installed on your workstation:
 
 ```powershell
-# 1. Thêm Tuquet Scoop Bucket
+# 1. Add Tuquet Scoop Bucket
 scoop bucket add tuquet https://github.com/tuquet/tuquet-scoop-bucket
 
-# 2. Cài đặt Claude-Agy
+# 2. Install Claude-Agy
 scoop install claude-agy
 ```
-*Lợi ích:* Quản lý trọn gói dependency `nodejs-lts`, shims tự động, bảo toàn token/config qua thư mục `persist`, nâng cấp 1 lệnh `scoop update claude-agy`.
+*Benefits:* Automatic dependency management (`nodejs-lts`), automatic shims, persistent tokens/config across version updates in `~/scoop/persist/claude-agy`, and one-command upgrades via `scoop update claude-agy`.
 
 ---
 
-### 🪟 Trên Windows 10 / 11 (PowerShell Script Trực Tiếp)
-Mở **PowerShell** (hoặc Windows Terminal) và chạy:
+### 🪟 Windows 10 / 11 (Direct PowerShell Script)
+Open **PowerShell** (or Windows Terminal) and run:
 
 ```powershell
 irm https://raw.githubusercontent.com/tuquet/tuquet-skills/main/skills/claude-agy/scripts/setup.ps1 | iex
 ```
 
-*Đặc điểm bộ cài Windows:*
-- Tự động kiểm tra & cài đặt Node.js LTS (qua `winget` nếu thiếu).
-- Tự động cài đặt `@anthropic-ai/claude-code`.
-- Tải binary `cli-proxy-api.exe` cho Windows AMD64.
-- **Thuần PowerShell 100%**: Script đồng bộ token `sync-token.ps1` giải mã JWT và đồng bộ token OAuth không cần cài Python.
-- Tự động tạo wrapper `claude-agy.cmd` và thêm vào User `PATH` (chạy được trong CMD, PowerShell, Git Bash).
+*Windows Installer Highlights:*
+- Automatically checks & installs Node.js LTS (via `winget` if missing).
+- Automatically installs `@anthropic-ai/claude-code`.
+- Downloads `cli-proxy-api.exe` binary for Windows AMD64.
+- **100% Pure PowerShell & Strict ASCII**: Zero Python requirement, decoding JWT tokens and syncing OAuth credentials natively without encoding issues.
+- Creates `claude-agy.cmd` wrapper and adds to User `PATH` (usable from CMD, PowerShell, and Git Bash).
 
 ---
 
-### 🐧 Trên Linux / Ubuntu / Debian / WSL
-Mở terminal và chạy:
+### 🐧 Linux / Ubuntu / Debian / WSL
+Open your terminal and run:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/tuquet/tuquet-skills/main/skills/claude-agy/scripts/setup.sh | bash
 ```
 
-*Đặc điểm bộ cài Linux:*
-- Tự động cài đặt gói phụ thuộc cơ bản (`curl`, `tar`, `netcat`, `python3`).
-- Tự động bypass giới hạn root của Claude Code (`IS_SANDBOX=1`).
-- Phơi lệnh toàn hệ thống qua symlink `/usr/local/bin/claude-agy`.
+*Linux Installer Highlights:*
+- Automatically installs required dependencies (`curl`, `tar`, `netcat`, `python3`).
+- Automatically bypasses Claude Code root execution restrictions (`IS_SANDBOX=1`).
+- Exposes system-wide command via `/usr/local/bin/claude-agy` symlink.
 
 ---
 
-## 📁 Cấu trúc Thư mục Ứng dụng Chuẩn
+## 📁 Standard Application Directory Layout
 
-Toàn bộ ứng dụng được đóng gói gọn gàng, cách ly hoàn toàn theo chuẩn đóng gói ứng dụng:
+The application is cleanly packaged and isolated:
 
 ```text
-# Trên Linux: ~/claude-agy/  |  Trên Windows: %USERPROFILE%\claude-agy\
+# Linux: ~/claude-agy/  |  Windows: %USERPROFILE%\claude-agy\
 ├── bin/
-│   ├── claude-agy            # Launcher script chính (Linux bash / Windows ps1 & cmd)
-│   └── cli-proxy-api         # Binary reverse proxy (Linux elf / Windows .exe)
+│   ├── claude-agy            # Primary launcher script (Linux bash / Windows ps1 & cmd)
+│   └── cli-proxy-api         # Reverse proxy binary (Linux elf / Windows .exe)
 ├── config/
-│   ├── config.yaml           # Cấu hình proxy tối giản (KISS & YAGNI)
-│   └── settings.env          # Cài đặt (cổng, auto bypass permission, model mặc định)
+│   ├── config.yaml           # Minimalist proxy configuration (KISS & YAGNI)
+│   └── settings.env          # Environment settings (port, auto-bypass permission, default model)
 ├── data/
-│   └── antigravity-auth.json # Token OAuth đồng bộ từ Antigravity CLI
+│   └── antigravity-auth.json # Synced OAuth credentials from Antigravity CLI
 ├── logs/
-│   └── proxy.log             # Log runtime proxy
+│   └── proxy.log             # Proxy runtime logs
 ├── scripts/
-│   ├── sync-token.py / .ps1  # Script đồng bộ token tự động
-│   └── uninstall.sh / .ps1   # Script gỡ cài đặt sạch sẽ
-├── uninstall.sh / .ps1       # Shortcut gỡ cài đặt nhanh tại thư mục gốc
+│   ├── sync-token.py / .ps1  # Automated token synchronization script
+│   └── uninstall.sh / .ps1   # Clean uninstallation script
+├── uninstall.sh / .ps1       # Root shortcut for quick uninstallation
 └── README.md
 ```
 
 ---
 
-## ⚙️ Cấu hình Tối giản (`config/config.yaml`)
+## ⚙️ Minimalist Configuration (`config/config.yaml`)
 
 ```yaml
 host: "127.0.0.1"
 port: 8318
-auth-dir: "/root/claude-agy/data"  # Hoặc C:/Users/.../data trên Windows
+auth-dir: "/root/claude-agy/data"  # Or C:/Users/.../data on Windows
 api-keys:
   - "sk-personal-claude-token"
 remote-management:
@@ -147,7 +147,7 @@ quota-exceeded:
   antigravity-credits: true
 debug: false
 
-# RẤT QUAN TRỌNG: Lọc từ khóa nhạy cảm chống mã lỗi 429 RESOURCE_EXHAUSTED từ Google Backend
+# CRITICAL: Filter sensitive system words to prevent 429 RESOURCE_EXHAUSTED from Google backend
 antigravity:
   sensitive-words:
     - "system-conventions"
@@ -164,17 +164,17 @@ antigravity:
 
 ---
 
-## 🛡️ Kỹ thuật Bypass Permission (Root & Unattended CI/CD)
+## 🛡️ Permission Bypass Techniques (Root & Unattended CI/CD)
 
-### Vấn đề:
-Khi chạy cờ `--dangerously-skip-permissions` trên Linux với user `root`, Claude Code sẽ chặn:
+### The Issue:
+When running `--dangerously-skip-permissions` on Linux as `root`, Claude Code blocks execution:
 ```text
 --dangerously-skip-permissions cannot be used with root/sudo privileges for security reasons
 ```
 
-### Giải pháp kỹ thuật:
-1. **Biến môi trường `IS_SANDBOX="1"`**:
-   Phân tích mã nguồn bytecode của Claude Code:
+### Technical Solution:
+1. **Environment Variable `IS_SANDBOX="1"`**:
+   By analyzing Claude Code's bytecode:
    ```javascript
    isRootOutsideDeliberateSandbox() {
      return this.sources.platform !== "win32"
@@ -183,10 +183,10 @@ Khi chạy cờ `--dangerously-skip-permissions` trên Linux với user `root`, 
        && !this.sources.isBubblewrapEnvSet();
    }
    ```
-   Khi `IS_SANDBOX="1"`, Claude Code coi phiên làm việc đã nằm trong sandbox bảo vệ và cho phép bỏ qua xác nhận.
+   When `IS_SANDBOX="1"`, Claude Code assumes execution occurs within an isolated container/sandbox and allows bypassing interactive confirmation.
 
-2. **Chấp thuận Dialog tự động trong `.claude.json`**:
-   Script cấu hình tự động ghi vào `~/.claude.json`:
+2. **Automated Dialog Acceptance in `~/.claude.json`**:
+   The installer pre-configures `~/.claude.json`:
    ```json
    {
      "bypassPermissionsModeAccepted": true,
@@ -196,46 +196,50 @@ Khi chạy cờ `--dangerously-skip-permissions` trên Linux với user `root`, 
      }
    }
    ```
-   Giúp công cụ chạy hoàn toàn không cần can thiệp bàn phím (zero-touch), lý tưởng cho CI/CD pipelines.
+   Enables 100% zero-touch execution, ideal for CI/CD automation and headless pipelines.
 
 ---
 
-## ⚡ Bảng Lệnh Tiện ích (Cheatsheet)
+## ⚡ Cheatsheet & Command Reference
 
-| Bạn muốn làm | Trong khung chat Claude Code | Hoặc từ Terminal |
+| Action | Inside Claude Code Chat | Or from Terminal |
 | :--- | :--- | :--- |
-| **Xem & chọn model** | `/model` (hiện danh sách đầy đủ) | `claude-agy --model <model-name>` |
-| **Dùng Sonnet mặc định** | `/model claude-sonnet-4-6` | `claude-agy` (mặc định sonnet) |
-| **Dùng Opus Thinking** | `/model claude-opus-4-6-thinking`| `claude-agy --model claude-opus-4-6-thinking` |
-| **Dùng Gemini 3.8 Flash**| `/model gemini-3.8-flash-high` | `claude-agy --model gemini-3.8-flash-high` |
-| **Chỉnh mức suy luận** | `/effort high` / `medium` / `low` | `claude-agy --effort high` |
-| **Chạy 1 lệnh rồi thoát** | - | `claude-agy -p "Viết hàm fibonacci"` |
-| **Bật lại hỏi quyền** | - | `claude-agy --no-bypass` |
+| **List & select model** | `/model` (interactive picker) | `claude-agy --model <model-name>` |
+| **Use default Sonnet** | `/model claude-sonnet-4-6` | `claude-agy` (Sonnet default) |
+| **Use Opus Thinking** | `/model claude-opus-4-6-thinking`| `claude-agy --model claude-opus-4-6-thinking` |
+| **Use Gemini 3.8 Flash**| `/model gemini-3.8-flash-high` | `claude-agy --model gemini-3.8-flash-high` |
+| **Set reasoning effort** | `/effort high` / `medium` / `low` | `claude-agy --effort high` |
+| **Run one-shot command** | - | `claude-agy -p "Write fibonacci in Rust"` |
+| **Restore permission prompts** | - | `claude-agy --no-bypass` |
 
 ---
 
-## 🗑️ Hướng dẫn Gỡ Cài Đặt (Clean Uninstallation)
+## 🗑️ Clean Uninstallation
 
-### Trên Windows:
+### On Windows:
 ```powershell
+# If installed via Scoop:
+scoop uninstall claude-agy
+
+# If installed via direct script:
 & "$env:USERPROFILE\claude-agy\uninstall.ps1"
 ```
 
-### Trên Linux:
+### On Linux:
 ```bash
 ~/claude-agy/uninstall.sh
 ```
 
 ---
 
-## 🔧 Xử lý Sự cố Thường gặp (Troubleshooting)
+## 🔧 Troubleshooting
 
-1. **Lỗi `429 RESOURCE_EXHAUSTED`:**
-   - *Nguyên nhân:* Google backend chặn các từ khóa hệ thống của Claude.
-   - *Khắc phục:* Kiểm tra xem mục `antigravity.sensitive-words` đã có trong `config/config.yaml` chưa.
-2. **Cổng 8318 bị chiếm (`Address already in use`):**
+1. **Error `429 RESOURCE_EXHAUSTED`:**
+   - *Cause:* Google backend filters Claude-specific system prompts.
+   - *Fix:* Ensure `antigravity.sensitive-words` is present in `config/config.yaml`.
+2. **Port 8318 Already in Use (`Address already in use`):**
    - *Linux:* `pkill -f "cli-proxy-api.*8318"`
    - *Windows:* `Get-Process cli-proxy-api | Stop-Process -Force`
-3. **Chưa đồng bộ được Token:**
-   - Đảm bảo bạn đã từng đăng nhập Google Antigravity CLI ít nhất một lần để tạo file token tại `~/.gemini/antigravity-cli/antigravity-oauth-token`.
-   - Nếu chưa có, chạy lệnh login: `cli-proxy-api --config config/config.yaml -antigravity-login`.
+3. **Failed to Sync OAuth Token:**
+   - Ensure you have logged into Google Antigravity CLI at least once to generate credentials at `~/.gemini/antigravity-cli/antigravity-oauth-token` or `~/.gemini/jetski-standalone-oauth-token`.
+   - If missing, trigger a login session: `cli-proxy-api --config config/config.yaml -antigravity-login`.

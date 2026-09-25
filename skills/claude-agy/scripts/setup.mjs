@@ -16,12 +16,12 @@ const CPA_VERSION = '7.3.17';
 const TARGET_DIR = process.env.TARGET_DIR || path.join(os.homedir(), 'claude-agy');
 
 console.log('\x1b[36m============================================================\x1b[0m');
-console.log('\x1b[36m 🚀 Claude-Agy Universal Cross-Platform Setup (Node.js Engine)\x1b[0m');
+console.log('\x1b[36m [SETUP] Claude-Agy Universal Cross-Platform Setup (Node.js)\x1b[0m');
 console.log('\x1b[36m============================================================\x1b[0m');
-console.log(`\x1b[33mThư mục cài đặt: ${TARGET_DIR}\x1b[0m`);
-console.log(`\x1b[33mHệ điều hành:    ${process.platform} (${process.arch})\x1b[0m\n`);
+console.log(`\x1b[33mTarget directory: ${TARGET_DIR}\x1b[0m`);
+console.log(`\x1b[33mPlatform:         ${process.platform} (${process.arch})\x1b[0m\n`);
 
-// 1. Tạo cấu trúc thư mục ứng dụng
+// 1. Create directory structure
 const binDir = path.join(TARGET_DIR, 'bin');
 const configDir = path.join(TARGET_DIR, 'config');
 const dataDir = path.join(TARGET_DIR, 'data');
@@ -34,8 +34,8 @@ for (const dir of [binDir, configDir, dataDir, logsDir, scriptsDir]) {
   }
 }
 
-// 2. Kiểm tra & Cài đặt Claude Code CLI (@anthropic-ai/claude-code)
-console.log('\x1b[36m[1/6] Kiểm tra Anthropic Claude Code CLI...\x1b[0m');
+// 2. Check and install Claude Code CLI (@anthropic-ai/claude-code)
+console.log('\x1b[36m[1/6] Checking Anthropic Claude Code CLI...\x1b[0m');
 let claudeAvailable = false;
 try {
   const checkCmd = process.platform === 'win32' ? 'where claude' : 'which claude';
@@ -46,20 +46,20 @@ try {
 }
 
 if (!claudeAvailable) {
-  console.log('  -> Đang cài đặt @anthropic-ai/claude-code toàn cục qua npm...');
+  console.log('  -> Installing @anthropic-ai/claude-code globally via npm...');
   try {
     execSync('npm install -g @anthropic-ai/claude-code', { stdio: 'inherit' });
-    console.log('  \x1b[32m-> Đã cài đặt @anthropic-ai/claude-code thành công.\x1b[0m');
+    console.log('  \x1b[32m-> @anthropic-ai/claude-code installed successfully.\x1b[0m');
   } catch (err) {
-    console.error('  \x1b[31m[LỖI] Không thể cài đặt @anthropic-ai/claude-code:\x1b[0m', err.message);
+    console.error('  \x1b[31m[ERROR] Failed to install @anthropic-ai/claude-code:\x1b[0m', err.message);
     process.exit(1);
   }
 } else {
-  console.log('  \x1b[32m-> Claude Code CLI đã có sẵn.\x1b[0m');
+  console.log('  \x1b[32m-> Claude Code CLI already available.\x1b[0m');
 }
 
-// 3. Tải và giải nén binary CLIProxyAPI
-console.log(`\n\x1b[36m[2/6] Kiểm tra CLIProxyAPI binary (v${CPA_VERSION})...\x1b[0m`);
+// 3. Download and extract CLIProxyAPI binary
+console.log(`\n\x1b[36m[2/6] Checking CLIProxyAPI binary (v${CPA_VERSION})...\x1b[0m`);
 const isWin = process.platform === 'win32';
 const exeName = isWin ? 'cli-proxy-api.exe' : 'cli-proxy-api';
 const proxyExePath = path.join(binDir, exeName);
@@ -84,7 +84,7 @@ if (!fs.existsSync(proxyExePath)) {
       ? `CLIProxyAPI_${CPA_VERSION}_darwin_arm64.tar.gz`
       : `CLIProxyAPI_${CPA_VERSION}_darwin_amd64.tar.gz`;
   } else {
-    console.error(`  \x1b[31m[LỖI] Hệ điều hành ${platform} chưa được hỗ trợ.\x1b[0m`);
+    console.error(`  \x1b[31m[ERROR] Operating system ${platform} is not supported.\x1b[0m`);
     process.exit(1);
   }
 
@@ -92,100 +92,96 @@ if (!fs.existsSync(proxyExePath)) {
   const tempArchive = path.join(os.tmpdir(), archiveName);
   const tempExtract = path.join(os.tmpdir(), `cpa_extract_${Date.now()}`);
 
-  console.log(`  -> Đang tải ${archiveName} từ GitHub...`);
+  console.log(`  -> Downloading ${archiveName} from GitHub...`);
   try {
     let downloaded = false;
-    // 1. Thử tải bằng curl (hỗ trợ proxy tự động và chuẩn đa nền tảng)
+    // 1. Try curl
     const curlBin = isWin ? 'curl.exe' : 'curl';
     try {
-      execSync(`${curlBin} -fsSL -o "${tempArchive}" "${downloadUrl}"`, { stdio: 'inherit' });
+      execSync(`${curlBin} -fsSL -o "${tempArchive}" "${downloadUrl}"`, { stdio: 'ignore' });
       if (fs.existsSync(tempArchive) && fs.statSync(tempArchive).size > 1000) {
         downloaded = true;
       }
     } catch {}
 
-    // 2. Fallback bằng powershell trên Windows nếu curl thất bại
+    // 2. Fallback to powershell on Windows if curl fails
     if (!downloaded && isWin) {
       try {
-        execSync(`powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri '${downloadUrl}' -OutFile '${tempArchive}' -UseBasicParsing"`, { stdio: 'inherit' });
+        const psCmd = `powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; (New-Object System.Net.WebClient).DownloadFile('${downloadUrl}', '${tempArchive}')"`;
+        execSync(psCmd, { stdio: 'ignore' });
         if (fs.existsSync(tempArchive) && fs.statSync(tempArchive).size > 1000) {
           downloaded = true;
         }
       } catch {}
     }
 
-    // 3. Fallback bằng native fetch
+    // 3. Fallback to native fetch
     if (!downloaded) {
-      const res = await fetch(downloadUrl);
-      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-      const arrayBuffer = await res.arrayBuffer();
-      fs.writeFileSync(tempArchive, Buffer.from(arrayBuffer));
-    }
-    console.log('  -> Tải hoàn tất. Đang giải nén...');
-
-    if (!fs.existsSync(tempExtract)) fs.mkdirSync(tempExtract, { recursive: true });
-
-    let extractSuccess = false;
-    try {
-      execSync(`tar -xf "${tempArchive}" -C "${tempExtract}"`, { stdio: 'ignore' });
-      extractSuccess = true;
-    } catch {
-      if (isWin && isZip) {
-        execSync(`powershell -NoProfile -Command "Expand-Archive -Path '${tempArchive}' -DestinationPath '${tempExtract}' -Force"`, { stdio: 'ignore' });
-        extractSuccess = true;
-      }
+      const resp = await fetch(downloadUrl);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
+      const buffer = Buffer.from(await resp.arrayBuffer());
+      fs.writeFileSync(tempArchive, buffer);
     }
 
-    if (!extractSuccess) {
-      throw new Error('Giải nén archive thất bại.');
+    console.log('  -> Download complete. Extracting archive...');
+    if (fs.existsSync(tempExtract)) {
+      fs.rmSync(tempExtract, { recursive: true, force: true });
+    }
+    fs.mkdirSync(tempExtract, { recursive: true });
+
+    if (isZip) {
+      const psUnzip = `powershell -NoProfile -Command "Expand-Archive -Path '${tempArchive}' -DestinationPath '${tempExtract}' -Force"`;
+      execSync(psUnzip, { stdio: 'ignore' });
+    } else {
+      execSync(`tar -xzf "${tempArchive}" -C "${tempExtract}"`, { stdio: 'ignore' });
     }
 
-    // Tìm binary đã giải nén
-    function findFileRecursive(dir, targetName) {
+    // Find extracted binary
+    function findFile(dir, targetName) {
       const entries = fs.readdirSync(dir, { withFileTypes: true });
       for (const entry of entries) {
-        const full = path.join(dir, entry.name);
+        const fullPath = path.join(dir, entry.name);
         if (entry.isDirectory()) {
-          const res = findFileRecursive(full, targetName);
+          const res = findFile(fullPath, targetName);
           if (res) return res;
-        } else if (entry.name.toLowerCase() === targetName.toLowerCase()) {
-          return full;
+        } else if (entry.name === targetName) {
+          return fullPath;
         }
       }
       return null;
     }
 
-    const foundBinary = findFileRecursive(tempExtract, exeName);
-    if (!foundBinary) {
-      throw new Error(`Không tìm thấy file ${exeName} trong nội dung giải nén.`);
+    const foundExe = findFile(tempExtract, exeName);
+    if (!foundExe) {
+      throw new Error(`Binary ${exeName} not found in extracted archive.`);
     }
 
-    fs.copyFileSync(foundBinary, proxyExePath);
+    fs.copyFileSync(foundExe, proxyExePath);
     if (!isWin) {
       fs.chmodSync(proxyExePath, 0o755);
     }
 
-    // Dọn dẹp temp
+    // Clean up temp files
     try {
-      fs.rmSync(tempArchive, { force: true });
+      fs.unlinkSync(tempArchive);
       fs.rmSync(tempExtract, { recursive: true, force: true });
     } catch {}
 
-    console.log(`  \x1b[32m-> Đã cài đặt binary: ${proxyExePath}\x1b[0m`);
+    console.log(`  \x1b[32m-> Binary installed: ${proxyExePath}\x1b[0m`);
   } catch (err) {
-    console.error('  \x1b[31m[LỖI] Không thể tải/cài đặt CLIProxyAPI:\x1b[0m', err.message);
+    console.error('  \x1b[31m[ERROR] Failed to download/install CLIProxyAPI:\x1b[0m', err.message);
     process.exit(1);
   }
 } else {
-  console.log(`  \x1b[32m-> Binary ${exeName} đã có sẵn.\x1b[0m`);
+  console.log(`  \x1b[32m-> Binary ${exeName} already available.\x1b[0m`);
 }
 
-// 4. Khởi tạo cấu hình config.yaml & settings.env
-console.log('\n\x1b[36m[3/6] Cấu hình proxy config.yaml & settings.env...\x1b[0m');
-const yamlDataDir = dataDir.replace(/\\/g, '/');
+// 4. Initialize config.yaml & settings.env
+console.log('\n\x1b[36m[3/6] Configuring proxy config.yaml & settings.env...\x1b[0m');
+const formattedDataDir = dataDir.replace(/\\/g, '/');
 const configYaml = `host: "127.0.0.1"
 port: 8318
-auth-dir: "${yamlDataDir}"
+auth-dir: "${formattedDataDir}"
 api-keys:
   - "sk-personal-claude-token"
 remote-management:
@@ -215,10 +211,10 @@ AUTO_BYPASS_PERMISSIONS=true
 DEFAULT_MODEL=claude-sonnet-4-6
 `;
 fs.writeFileSync(path.join(configDir, 'settings.env'), settingsEnv, 'utf-8');
-console.log('  \x1b[32m-> Đã ghi file config/config.yaml và config/settings.env.\x1b[0m');
+console.log('  \x1b[32m-> Wrote config/config.yaml and config/settings.env.\x1b[0m');
 
-// 5. Cấu hình tự động bypass Trust Dialog của Claude Code
-console.log('\n\x1b[36m[4/6] Cấu hình Claude Code Onboarding & Trust Dialog...\x1b[0m');
+// 5. Bypass Claude Code trust dialog
+console.log('\n\x1b[36m[4/6] Configuring Claude Code trust dialog & onboarding...\x1b[0m');
 try {
   const claudeConfigPath = path.join(os.homedir(), '.claude.json');
   let claudeConfig = {};
@@ -237,13 +233,13 @@ try {
     }
   }
   fs.writeFileSync(claudeConfigPath, JSON.stringify(claudeConfig, null, 2), 'utf-8');
-  console.log('  \x1b[32m-> Đã tự động cấu hình bypass dialog trong ~/.claude.json.\x1b[0m');
+  console.log('  \x1b[32m-> Configured trust dialog bypass in ~/.claude.json.\x1b[0m');
 } catch (err) {
-  console.log('  \x1b[33m-> Bỏ qua thiết lập trust dialog:\x1b[0m', err.message);
+  console.log('  \x1b[33m-> Skipped trust dialog configuration:\x1b[0m', err.message);
 }
 
 // 6. Dynamic Multi-Source Token Resolver
-console.log('\n\x1b[36m[5/6] Đồng bộ Google Antigravity OAuth Token (Dynamic Resolver)...\x1b[0m');
+console.log('\n\x1b[36m[5/6] Syncing Google Antigravity OAuth Token (Dynamic Resolver)...\x1b[0m');
 export function resolveAntigravityToken(appDataDir) {
   const home = os.homedir();
   const tokenCandidates = [
@@ -290,24 +286,24 @@ export function resolveAntigravityToken(appDataDir) {
           return { success: true, email, source: candidatePath };
         }
       } catch (err) {
-        // Tiếp tục kiểm tra candidate tiếp theo
+        // Continue to next candidate
       }
     }
   }
-  return { success: false, error: 'Không tìm thấy file token Antigravity hợp lệ tại ~/.gemini' };
+  return { success: false, error: 'No valid Antigravity token found at ~/.gemini' };
 }
 
 const syncResult = resolveAntigravityToken(dataDir);
 if (syncResult.success) {
-  console.log(`  \x1b[32m-> [OK] Đã phát hiện và đồng bộ token thành công từ:\x1b[0m\n     📂 ${syncResult.source}`);
-  console.log(`     👤 Tài khoản: \x1b[33m${syncResult.email}\x1b[0m`);
+  console.log(`  \x1b[32m-> [OK] Detected and synced token from:\x1b[0m\n     Source: ${syncResult.source}`);
+  console.log(`     Account: \x1b[33m${syncResult.email}\x1b[0m`);
 } else {
-  console.log(`  \x1b[33m-> [CHÚ Ý] ${syncResult.error}.\x1b[0m`);
-  console.log('     Bạn có thể đăng nhập bằng lệnh: cli-proxy-api --config config/config.yaml -antigravity-login');
+  console.log(`  \x1b[33m-> [NOTE] ${syncResult.error}.\x1b[0m`);
+  console.log('     You can authenticate using: cli-proxy-api --config config/config.yaml -antigravity-login');
 }
 
-// 7. Tạo Launcher Script Đa Nền Tảng (bin/claude-agy.mjs + wrappers)
-console.log('\n\x1b[36m[6/6] Khởi tạo Universal Launcher (claude-agy.mjs)...\x1b[0m');
+// 7. Universal Launcher Script (bin/claude-agy.mjs + wrappers)
+console.log('\n\x1b[36m[6/6] Initializing Universal Launcher (claude-agy.mjs)...\x1b[0m');
 
 const launcherCode = `#!/usr/bin/env node
 import fs from 'node:fs';
@@ -322,7 +318,7 @@ const binDir = path.dirname(__filename);
 const appDir = path.resolve(binDir, '..');
 const isWin = process.platform === 'win32';
 
-// 1. Dynamic Token Sync trước khi chạy
+// 1. Dynamic Token Sync before execution
 function syncToken() {
   const home = os.homedir();
   const tokenCandidates = [
@@ -365,7 +361,7 @@ function syncToken() {
 }
 syncToken();
 
-// 2. Đọc settings.env
+// 2. Read settings.env
 let port = 8318;
 let autoBypass = true;
 let defaultModel = 'claude-sonnet-4-6';
@@ -385,7 +381,7 @@ if (fs.existsSync(settingsPath)) {
   }
 }
 
-// 3. Phân tích tham số dòng lệnh
+// 3. Process CLI arguments
 const rawArgs = process.argv.slice(2);
 let enableBypass = autoBypass;
 let modelSpecified = false;
@@ -421,7 +417,7 @@ process.env.ANTHROPIC_BASE_URL = \`http://127.0.0.1:\${port}\`;
 process.env.ANTHROPIC_AUTH_TOKEN = 'sk-personal-claude-token';
 process.env.CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY = '1';
 
-// 4. Kiểm tra cổng proxy và khởi chạy ngầm nếu chưa chạy
+// 4. Test port and start proxy if not running
 function isPortOpen(host, portNum) {
   return new Promise((resolve) => {
     const socket = new net.Socket();
@@ -450,7 +446,7 @@ if (!portAlreadyOpen) {
   });
   startedProxy = true;
 
-  // Đợi cổng mở (tối đa 5s)
+  // Wait for port to open (up to 5s)
   let ready = false;
   for (let attempt = 0; attempt < 25; attempt++) {
     await new Promise((r) => setTimeout(r, 200));
@@ -460,13 +456,13 @@ if (!portAlreadyOpen) {
     }
   }
   if (!ready) {
-    console.error('\\x1b[31m[LỖI] Không thể kết nối tới Proxy. Xem chi tiết tại logs/proxy.err.log\\x1b[0m');
+    console.error('\\x1b[31m[ERROR] Failed to connect to Proxy. Check logs/proxy.err.log\\x1b[0m');
     if (proxyProc) proxyProc.kill();
     process.exit(1);
   }
 }
 
-// 5. Khởi chạy Claude Code CLI
+// 5. Launch Claude Code CLI
 const claudeExecutable = isWin ? 'claude.cmd' : 'claude';
 const claudeProc = spawn(claudeExecutable, processedArgs, {
   stdio: 'inherit',
@@ -500,13 +496,13 @@ if (!isWin) {
   fs.chmodSync(path.join(binDir, 'claude-agy.mjs'), 0o755);
 }
 
-// Tạo wrapper cho Windows CMD & PowerShell
+// Wrapper for Windows CMD & PowerShell
 if (isWin) {
   const cmdWrapper = `@echo off\r\nnode "%~dp0claude-agy.mjs" %*\r\n`;
   fs.writeFileSync(path.join(binDir, 'claude-agy.cmd'), cmdWrapper, 'ascii');
 }
 
-// Tạo symlink hoặc shell shim cho Unix
+// Wrapper for Unix
 if (!isWin) {
   const shShim = `#!/usr/bin/env bash\nexec node "${path.join(binDir, 'claude-agy.mjs')}" "$@"\n`;
   const shPath = path.join(binDir, 'claude-agy');
@@ -514,7 +510,7 @@ if (!isWin) {
   fs.chmodSync(shPath, 0o755);
 }
 
-// Tạo uninstaller đa nền tảng
+// Multi-platform uninstaller
 const uninstallerCode = `#!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
@@ -525,7 +521,7 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const appDir = path.resolve(path.dirname(__filename), '..');
 
-console.log('\\x1b[36m>> Bắt đầu gỡ cài đặt Claude-Agy...\\x1b[0m');
+console.log('\\x1b[36m>> Starting Claude-Agy uninstallation...\\x1b[0m');
 
 try {
   if (process.platform === 'win32') {
@@ -542,42 +538,41 @@ if (process.platform === 'win32') {
   } catch {}
 }
 
-console.log('\\x1b[32m>> Đã dừng tiến trình proxy và gỡ PATH thành công.\\x1b[0m');
-console.log(\`>> Để xóa sạch dữ liệu, hãy chạy: rm -rf "\${appDir}" hoặc Remove-Item -Recurse -Force "\${appDir}"\`);
+console.log('\\x1b[32m>> Stopped proxy process and removed PATH successfully.\\x1b[0m');
+console.log(\`>> To completely delete data, run: rm -rf "\${appDir}" or Remove-Item -Recurse -Force "\${appDir}"\`);
 `;
 fs.writeFileSync(path.join(scriptsDir, 'uninstall.mjs'), uninstallerCode, 'utf-8');
 fs.writeFileSync(path.join(TARGET_DIR, 'uninstall.mjs'), uninstallerCode, 'utf-8');
 
-// 8. Cấu hình biến môi trường PATH
-console.log('\n\x1b[36mCấu hình môi trường PATH toàn cục...\x1b[0m');
+// 8. Configure PATH
+console.log('\n\x1b[36mConfiguring User PATH environment...\x1b[0m');
 if (isWin) {
   try {
     const psCheck = `powershell -NoProfile -Command "$u = [Environment]::GetEnvironmentVariable('Path', 'User'); if (-not ($u -split ';' -contains '${binDir}')) { [Environment]::SetEnvironmentVariable('Path', ($u + ';${binDir}'), 'User') }"`;
     execSync(psCheck, { stdio: 'ignore' });
-    console.log(`  \x1b[32m-> Đã thêm ${binDir} vào User PATH.\x1b[0m`);
+    console.log(`  \x1b[32m-> Added ${binDir} to User PATH.\x1b[0m`);
   } catch (err) {
-    console.log('  \x1b[33m-> Không thể ghi tự động vào User PATH, vui lòng thêm thủ công:\x1b[0m', binDir);
+    console.log('  \x1b[33m-> Could not auto-write to User PATH, please add manually:\x1b[0m', binDir);
   }
 } else {
-  // Symlink vào /usr/local/bin nếu có quyền sudo, hoặc gợi ý PATH
   try {
     const symlinkTarget = '/usr/local/bin/claude-agy';
     if (!fs.existsSync(symlinkTarget)) {
       execSync(`ln -sf "${path.join(binDir, 'claude-agy')}" "${symlinkTarget}"`, { stdio: 'ignore' });
-      console.log(`  \x1b[32m-> Đã tạo symlink toàn cục tại ${symlinkTarget}.\x1b[0m`);
+      console.log(`  \x1b[32m-> Created global symlink at ${symlinkTarget}.\x1b[0m`);
     }
   } catch {
-    console.log(`  \x1b[33m-> Hãy thêm dòng sau vào ~/.bashrc hoặc ~/.zshrc:\x1b[0m export PATH="$PATH:${binDir}"`);
+    console.log(`  \x1b[33m-> Please add the following to ~/.bashrc or ~/.zshrc:\x1b[0m export PATH="$PATH:${binDir}"`);
   }
 }
 
 console.log(`
 \x1b[32m============================================================\x1b[0m
-\x1b[32m 🎉 HOÀN TẤT CÀI ĐẶT CLAUDE-AGY (UNIVERSAL ENGINE)!\x1b[0m
+\x1b[32m [SUCCESS] Claude-Agy Installation Completed! (Universal)\x1b[0m
 \x1b[32m============================================================\x1b[0m
- \x1b[36m👉 Lệnh sử dụng:\x1b[0m claude-agy
- \x1b[36m👉 Đổi Model:\x1b[0m    Trong khung chat Claude, gõ \x1b[33m/model\x1b[0m
- \x1b[36m👉 Gỡ cài đặt:\x1b[0m   node "${path.join(TARGET_DIR, 'uninstall.mjs')}"
+ \x1b[36mCommand:\x1b[0m   claude-agy
+ \x1b[36mModel:\x1b[0m     Inside Claude chat, type \x1b[33m/model\x1b[0m
+ \x1b[36mUninstall:\x1b[0m node "${path.join(TARGET_DIR, 'uninstall.mjs')}"
 
- * Mẹo: Mở một cửa sổ Terminal mới để nhận diện lệnh 'claude-agy' ngay lập tức.
+ * Tip: Open a new Terminal window to recognize 'claude-agy' command immediately.
 `);

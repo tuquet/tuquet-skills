@@ -12,22 +12,22 @@ GREEN="\033[0;32m"
 BLUE="\033[0;34m"
 NC="\033[0m"
 
-echo -e "${BLUE}==>${NC} Bắt đầu gỡ cài đặt Claude-Agy..."
+echo -e "${BLUE}==>${NC} Starting Claude-Agy uninstallation..."
 
-# 1. Dừng tiến trình proxy cổng 8318 nếu đang chạy
-echo -e "${BLUE}==>${NC} Dừng tiến trình proxy (nếu có)..."
+# 1. Stop proxy process on port 8318 if running
+echo -e "${BLUE}==>${NC} Stopping proxy process (if running)..."
 pkill -f "cli-proxy-api.*8318" 2>/dev/null || true
 
-# 2. Xóa symlink toàn hệ thống
+# 2. Remove system-wide symlink
 if [ -L "$SYMLINK_PATH" ] || [ -f "$SYMLINK_PATH" ]; then
-    echo -e "${BLUE}==>${NC} Xóa symlink ${GREEN}$SYMLINK_PATH${NC}..."
+    echo -e "${BLUE}==>${NC} Removing symlink ${GREEN}$SYMLINK_PATH${NC}..."
     sudo rm -f "$SYMLINK_PATH" 2>/dev/null || rm -f "$SYMLINK_PATH"
 fi
 
-# 3. Xóa thư mục cài đặt nếu tồn tại
+# 3. Remove installation directory if exists
 if [ -d "$INSTALL_DIR" ]; then
-    echo -e "${BLUE}==>${NC} Xóa thư mục ứng dụng ${GREEN}$INSTALL_DIR${NC}..."
+    echo -e "${BLUE}==>${NC} Removing application directory ${GREEN}$INSTALL_DIR${NC}..."
     rm -rf "$INSTALL_DIR"
 fi
 
-echo -e "\n${GREEN}🎉 Đã gỡ bỏ hoàn toàn Claude-Agy khỏi hệ thống!${NC}"
+echo -e "\n${GREEN}[SUCCESS] Claude-Agy has been completely removed from the system!${NC}"

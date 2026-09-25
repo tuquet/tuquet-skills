@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # One-Click Setup Script for Claude Code + Antigravity (claude-agy)
-# Can be run on any fresh Ubuntu/Debian/Linux machine
+# Supports Linux / Ubuntu / Debian / WSL
 # ==============================================================================
 set -e
 
@@ -16,23 +16,23 @@ YELLOW="\033[1;33m"
 RED="\033[0;31m"
 NC="\033[0m"
 
-echo -e "${BLUE}==>${NC} Cài đặt Claude-Agy vào: ${GREEN}$INSTALL_DIR${NC}"
+echo -e "${BLUE}==>${NC} Installing Claude-Agy into: ${GREEN}$INSTALL_DIR${NC}"
 
-# 1. Tạo các thư mục
+# 1. Create directories
 mkdir -p "$INSTALL_DIR"/{bin,config,data,logs,scripts}
 
-# 2. Cài đặt các gói phụ thuộc cơ bản
+# 2. Install basic dependencies
 if command -v apt-get >/dev/null 2>&1; then
     sudo apt-get update -qq && sudo apt-get install -y -qq curl tar netcat-openbsd python3
 fi
 
-# 3. Cài đặt Claude Code CLI nếu chưa có
+# 3. Install Claude Code CLI if missing
 if ! command -v claude >/dev/null 2>&1; then
-    echo -e "${BLUE}==>${NC} Cài đặt @anthropic-ai/claude-code..."
+    echo -e "${BLUE}==>${NC} Installing @anthropic-ai/claude-code..."
     npm install -g @anthropic-ai/claude-code
 fi
 
-# 4. Tải binary cli-proxy-api
+# 4. Download cli-proxy-api binary
 PROXY_BIN="$INSTALL_DIR/bin/cli-proxy-api"
 if [ ! -f "$PROXY_BIN" ]; then
     ARCH=$(uname -m)
@@ -40,15 +40,15 @@ if [ ! -f "$PROXY_BIN" ]; then
         x86_64)  CPA_ARCH="linux_amd64" ;;
         aarch64) CPA_ARCH="linux_aarch64" ;;
         arm64)   CPA_ARCH="linux_aarch64" ;;
-        *) echo -e "${RED}[ERROR] Kiến trúc $ARCH chưa được hỗ trợ.${NC}"; exit 1 ;;
+        *) echo -e "${RED}[ERROR] Architecture $ARCH is not supported.${NC}"; exit 1 ;;
     esac
-    echo -e "${BLUE}==>${NC} Tải CLIProxyAPI v${CPA_VERSION}..."
+    echo -e "${BLUE}==>${NC} Downloading CLIProxyAPI v${CPA_VERSION}..."
     curl -sSL "https://github.com/router-for-me/CLIProxyAPI/releases/download/v${CPA_VERSION}/CLIProxyAPI_${CPA_VERSION}_${CPA_ARCH}.tar.gz" | tar -xz -C /tmp
     mv /tmp/cli-proxy-api "$PROXY_BIN"
     chmod +x "$PROXY_BIN"
 fi
 
-# 5. Khởi tạo config/config.yaml
+# 5. Initialize config/config.yaml
 cat << EOF > "$INSTALL_DIR/config/config.yaml"
 host: "127.0.0.1"
 port: 8318
@@ -76,14 +76,14 @@ antigravity:
     - "proxy"
 EOF
 
-# 6. Khởi tạo config/settings.env
+# 6. Initialize config/settings.env
 cat << 'EOF' > "$INSTALL_DIR/config/settings.env"
 PORT=8318
 AUTO_BYPASS_PERMISSIONS=true
 DEFAULT_MODEL="claude-sonnet-4-6"
 EOF
 
-# 7. Khởi tạo scripts/sync-token.py
+# 7. Initialize scripts/sync-token.py
 cat << 'EOF' > "$INSTALL_DIR/scripts/sync-token.py"
 #!/usr/bin/env python3
 import json, os, sys, time, base64
@@ -108,7 +108,7 @@ def sync_antigravity_token(app_dir):
             except Exception:
                 continue
     if not gemini_data:
-        return False, "Không tìm thấy token Antigravity tại ~/.gemini"
+        return False, "No Antigravity token found at ~/.gemini"
     try:
         tok = gemini_data.get("token", gemini_data)
         id_tok = gemini_data.get("id_token", "")
@@ -133,7 +133,7 @@ def sync_antigravity_token(app_dir):
         }
         with open(auth_file, "w", encoding="utf-8") as f:
             json.dump(auth_payload, f, indent=2)
-        return True, f"{email} (từ {source_path})"
+        return True, f"{email} (from {source_path})"
     except Exception as e:
         return False, str(e)
 
@@ -157,12 +157,12 @@ if __name__ == "__main__":
     setup_trust()
     app = sys.argv[1] if len(sys.argv) > 1 else os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     ok, msg = sync_antigravity_token(app)
-    if ok: print(f"[OK] Token đồng bộ: {msg}")
+    if ok: print(f"[OK] Token synced: {msg}")
     else: print(f"[INFO] {msg}")
 EOF
 chmod +x "$INSTALL_DIR/scripts/sync-token.py"
 
-# 8. Khởi tạo bin/claude-agy
+# 8. Initialize bin/claude-agy
 cat << 'EOF' > "$INSTALL_DIR/bin/claude-agy"
 #!/usr/bin/env bash
 SOURCE="${BASH_SOURCE[0]}"
@@ -219,7 +219,7 @@ if ! nc -z 127.0.0.1 "$PORT" 2>/dev/null; then
     sleep 0.2
     local_retries=$((local_retries + 1))
     if [ $local_retries -gt 15 ]; then
-      echo ">> [LỖI] Không thể khởi động Proxy. Log: $APP_DIR/logs/proxy.log"
+      echo ">> [ERROR] Failed to start Proxy. Log: $APP_DIR/logs/proxy.log"
       exit 1
     fi
   done
@@ -240,29 +240,28 @@ exit $EXIT_CODE
 EOF
 chmod +x "$INSTALL_DIR/bin/claude-agy"
 
-# 9. Tạo symlink toàn hệ thống
+# 9. Create system-wide symlink
 sudo ln -sf "$INSTALL_DIR/bin/claude-agy" "$SYMLINK_PATH" 2>/dev/null || ln -sf "$INSTALL_DIR/bin/claude-agy" "$SYMLINK_PATH"
 
-# 10. Tạo script gỡ cài đặt
+# 10. Create uninstaller script
 cat << 'EOF' > "$INSTALL_DIR/uninstall.sh"
 #!/usr/bin/env bash
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SYMLINK_PATH="/usr/local/bin/claude-agy"
 
-echo ">> Bắt đầu gỡ cài đặt Claude-Agy..."
+echo ">> Starting Claude-Agy uninstallation..."
 pkill -f "cli-proxy-api.*8318" 2>/dev/null || true
 if [ -L "$SYMLINK_PATH" ] || [ -f "$SYMLINK_PATH" ]; then
-    echo ">> Xóa symlink $SYMLINK_PATH..."
+    echo ">> Removing symlink $SYMLINK_PATH..."
     sudo rm -f "$SYMLINK_PATH" 2>/dev/null || rm -f "$SYMLINK_PATH"
 fi
-echo ">> Gỡ cài đặt hoàn tất. Để xóa thư mục ứng dụng, chạy: rm -rf \"$APP_DIR\""
+echo ">> Uninstallation complete. To delete the application directory, run: rm -rf \"$APP_DIR\""
 EOF
 chmod +x "$INSTALL_DIR/uninstall.sh"
 
-# 11. Chạy đồng bộ token lần đầu
+# 11. Initial token sync
 python3 "$INSTALL_DIR/scripts/sync-token.py" "$INSTALL_DIR"
 
-echo -e "\n${GREEN}🎉 Hoàn tất cài đặt Claude-Agy!${NC}"
-echo -e "Lệnh khả dụng: ${GREEN}claude-agy${NC}"
-echo -e "Gỡ cài đặt:    ${YELLOW}$INSTALL_DIR/uninstall.sh${NC}"
-
+echo -e "\n${GREEN}[SUCCESS] Claude-Agy installation completed!${NC}"
+echo -e "Available command: ${GREEN}claude-agy${NC}"
+echo -e "Uninstaller:       ${YELLOW}$INSTALL_DIR/uninstall.sh${NC}"
