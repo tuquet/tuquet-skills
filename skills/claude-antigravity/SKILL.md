@@ -63,7 +63,21 @@ curl -fsSL https://raw.githubusercontent.com/tuquet/tuquet-skills/main/skills/cl
 
 ---
 
-### 🪟 Trên Windows 10 / 11 (PowerShell Script)
+### 🪟 Trên Windows (Cài Đặt Qua Scoop - Khuyên Dùng Cho Developer)
+Nếu máy đã cài Scoop:
+
+```powershell
+# 1. Thêm Tuquet Scoop Bucket
+scoop bucket add tuquet https://github.com/tuquet/tuquet-scoop-bucket
+
+# 2. Cài đặt Claude-Agy
+scoop install claude-agy
+```
+*Lợi ích:* Quản lý trọn gói dependency `nodejs-lts`, shims tự động, bảo toàn token/config qua thư mục `persist`, nâng cấp 1 lệnh `scoop update claude-agy`.
+
+---
+
+### 🪟 Trên Windows 10 / 11 (PowerShell Script Trực Tiếp)
 Mở **PowerShell** (hoặc Windows Terminal) và chạy:
 
 ```powershell

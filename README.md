@@ -51,7 +51,21 @@ curl -fsSL https://raw.githubusercontent.com/tuquet/tuquet-skills/main/skills/cl
 
 ---
 
-### 🪟 Dành cho Windows (PowerShell Script)
+### 🪟 Dành cho Windows (Qua Scoop - Khuyên Dùng Cho Developer)
+Nếu bạn sử dụng [Scoop](https://scoop.sh), đây là phương pháp chuẩn hóa, cách ly và tiện lợi nhất:
+
+```powershell
+# 1. Thêm Tuquet Scoop Bucket
+scoop bucket add tuquet https://github.com/tuquet/tuquet-scoop-bucket
+
+# 2. Cài đặt Claude-Agy
+scoop install claude-agy
+```
+*Tự động cài đặt dependency Node.js LTS, cấu hình shims, bypass trust dialog, persist token & config qua các lần cập nhật (`scoop update claude-agy`).*
+
+---
+
+### 🪟 Dành cho Windows (PowerShell Script Trực Tiếp)
 Mở **PowerShell** và dán lệnh:
 ```powershell
 irm https://raw.githubusercontent.com/tuquet/tuquet-skills/main/skills/claude-antigravity/scripts/setup.ps1 | iex
