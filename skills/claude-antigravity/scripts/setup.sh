@@ -74,46 +74,13 @@ antigravity:
     - "claude"
     - "API"
     - "proxy"
-
-oauth-model-alias:
-  antigravity:
-    - name: "gemini-3.8-flash-high"
-      alias: "3.8"
-    - name: "gemini-3.8-flash-high"
-      alias: "3.8-high"
-    - name: "gemini-3.7-flash-high"
-      alias: "3.7"
-    - name: "claude-opus-4-6-thinking"
-      alias: "opus"
-    - name: "claude-sonnet-4-6"
-      alias: "sonnet"
-    - name: "claude-opus-4-6-thinking"
-      alias: "claude-opus-4-8"
-    - name: "claude-opus-4-6-thinking"
-      alias: "claude-opus-4-7"
-    - name: "claude-opus-4-6-thinking"
-      alias: "claude-opus-4-6"
-    - name: "claude-sonnet-4-6"
-      alias: "claude-sonnet-5"
-    - name: "claude-sonnet-4-6"
-      alias: "claude-sonnet-4-5"
-    - name: "claude-sonnet-4-6"
-      alias: "claude-3-7-sonnet-20250219"
-    - name: "claude-sonnet-4-6"
-      alias: "claude-3-7-sonnet"
-    - name: "claude-sonnet-4-6"
-      alias: "claude-3-5-sonnet-20241022"
-    - name: "gemini-3.8-flash-high"
-      alias: "claude-3-5-haiku-20241022"
-    - name: "gemini-3.8-flash-high"
-      alias: "claude-haiku-4-5"
 EOF
 
 # 6. Khởi tạo config/settings.env
 cat << 'EOF' > "$INSTALL_DIR/config/settings.env"
 PORT=8318
 AUTO_BYPASS_PERMISSIONS=true
-DEFAULT_MODEL=""
+DEFAULT_MODEL="claude-sonnet-4-6"
 EOF
 
 # 7. Khởi tạo scripts/sync-token.py
@@ -259,8 +226,26 @@ chmod +x "$INSTALL_DIR/bin/claude-agy"
 # 9. Tạo symlink toàn hệ thống
 sudo ln -sf "$INSTALL_DIR/bin/claude-agy" "$SYMLINK_PATH" 2>/dev/null || ln -sf "$INSTALL_DIR/bin/claude-agy" "$SYMLINK_PATH"
 
-# 10. Chạy đồng bộ token lần đầu
+# 10. Tạo script gỡ cài đặt
+cat << 'EOF' > "$INSTALL_DIR/uninstall.sh"
+#!/usr/bin/env bash
+APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SYMLINK_PATH="/usr/local/bin/claude-agy"
+
+echo ">> Bắt đầu gỡ cài đặt Claude-Agy..."
+pkill -f "cli-proxy-api.*8318" 2>/dev/null || true
+if [ -L "$SYMLINK_PATH" ] || [ -f "$SYMLINK_PATH" ]; then
+    echo ">> Xóa symlink $SYMLINK_PATH..."
+    sudo rm -f "$SYMLINK_PATH" 2>/dev/null || rm -f "$SYMLINK_PATH"
+fi
+echo ">> Gỡ cài đặt hoàn tất. Để xóa thư mục ứng dụng, chạy: rm -rf \"$APP_DIR\""
+EOF
+chmod +x "$INSTALL_DIR/uninstall.sh"
+
+# 11. Chạy đồng bộ token lần đầu
 python3 "$INSTALL_DIR/scripts/sync-token.py" "$INSTALL_DIR"
 
 echo -e "\n${GREEN}🎉 Hoàn tất cài đặt Claude-Agy!${NC}"
 echo -e "Lệnh khả dụng: ${GREEN}claude-agy${NC}"
+echo -e "Gỡ cài đặt:    ${YELLOW}$INSTALL_DIR/uninstall.sh${NC}"
+
