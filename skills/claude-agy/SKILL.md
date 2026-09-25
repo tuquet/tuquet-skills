@@ -43,16 +43,11 @@ The system is designed strictly following **KISS** (Keep It Simple, Stupid) and 
 ## 🚀 One-Click Installation
 
 ### 🌟 Universal 1-File Setup (Recommended: Windows, Linux, macOS)
-Use the pure Node.js installer (Zero External Dependencies) for consistent installation across all platforms:
+Use the pure Node.js installer from the dedicated [`tuquet/claude-agy`](https://github.com/tuquet/claude-agy) repository:
 
 ```bash
-# Run directly from repository
-node skills/claude-agy/scripts/setup.mjs
-```
-
-Or run directly via network with a single command:
-```bash
-curl -fsSL https://raw.githubusercontent.com/tuquet/tuquet-skills/main/skills/claude-agy/scripts/setup.mjs | node
+# Run one-line network installer
+curl -fsSL https://raw.githubusercontent.com/tuquet/claude-agy/main/setup.mjs | node
 ```
 
 *Universal Setup Highlights:*
@@ -81,7 +76,7 @@ scoop install claude-agy
 Open **PowerShell** (or Windows Terminal) and run:
 
 ```powershell
-irm https://raw.githubusercontent.com/tuquet/tuquet-skills/main/skills/claude-agy/scripts/setup.ps1 | iex
+irm https://raw.githubusercontent.com/tuquet/claude-agy/main/scripts/setup.ps1 | iex
 ```
 
 *Windows Installer Highlights:*
@@ -97,7 +92,7 @@ irm https://raw.githubusercontent.com/tuquet/tuquet-skills/main/skills/claude-ag
 Open your terminal and run:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/tuquet/tuquet-skills/main/skills/claude-agy/scripts/setup.sh | bash
+curl -fsSL https://raw.githubusercontent.com/tuquet/claude-agy/main/scripts/setup.sh | bash
 ```
 
 *Linux Installer Highlights:*
