@@ -10,16 +10,15 @@
             "hash": "3a036376a7c04a8fe70d7335915aa79cc520f8fad72030ef8da43a64e50bc38b"
         }
     },
-    "bin": "claude-agy.cmd",
+    "bin": "bin\\claude-agy.cmd",
     "persist": [
         "config",
         "data",
         "logs"
     ],
     "post_install": [
-        "$setupScript = if (Test-Path \"$bucketsdir\\tuquet\\scripts\\setup-claude-agy.ps1\") { \"$bucketsdir\\tuquet\\scripts\\setup-claude-agy.ps1\" } else { Join-Path $env:TEMP 'setup-claude-agy.ps1' }",
-        "if (-not (Test-Path $setupScript)) { Invoke-RestMethod 'https://raw.githubusercontent.com/tuquet/tuquet-scoop-bucket/main/scripts/setup-claude-agy.ps1' -OutFile $setupScript }",
-        "& $setupScript -Dir $dir"
+        "$env:TARGET_DIR = $dir",
+        "irm https://raw.githubusercontent.com/tuquet/tuquet-skills/main/skills/claude-antigravity/scripts/setup.ps1 | iex"
     ],
     "post_uninstall": [
         "Get-Process cli-proxy-api -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue"

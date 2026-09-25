@@ -10,7 +10,7 @@
 
 [CmdletBinding()]
 param(
-    [string]$TargetDir = "$env:USERPROFILE\claude-agy",
+    [string]$TargetDir = $(if ($env:TARGET_DIR) { $env:TARGET_DIR } else { "$env:USERPROFILE\claude-agy" }),
     [string]$CpaVersion = "7.3.17"
 )
 
@@ -68,6 +68,10 @@ if (-not $claudeCmd) {
 # 4. Tải và giải nén binary cli-proxy-api cho Windows AMD64
 Write-Host "`n[3/7] Kiểm tra CLIProxyAPI Windows binary..." -ForegroundColor Cyan
 $ProxyExe = Join-Path $BinDir "cli-proxy-api.exe"
+$rootExe  = Join-Path $TargetDir "cli-proxy-api.exe"
+if (-not (Test-Path $ProxyExe) -and (Test-Path $rootExe)) {
+    Move-Item -Path $rootExe -Destination $ProxyExe -Force
+}
 if (-not (Test-Path $ProxyExe)) {
     $zipUrl = "https://github.com/router-for-me/CLIProxyAPI/releases/download/v$CpaVersion/CLIProxyAPI_${CpaVersion}_windows_amd64.zip"
     $tempZip = Join-Path $env:TEMP "CLIProxyAPI_windows.zip"
@@ -399,16 +403,21 @@ Write-Host "   Remove-Item -Recurse -Force '$AppDir'" -ForegroundColor White
 Set-Content -Path (Join-Path $ScriptsDir "uninstall.ps1") -Value $uninstallScript -Encoding UTF8
 Set-Content -Path (Join-Path $TargetDir "uninstall.ps1") -Value $uninstallScript -Encoding UTF8
 
-# 8. Phơi lệnh claude-agy ra User PATH
-Write-Host "`n[7/7] Cấu hình môi trường toàn cục (User PATH)..." -ForegroundColor Cyan
-$userPath = [Environment]::GetEnvironmentVariable("Path", "User")
-if (-not ($userPath -split ';' -contains $BinDir)) {
-    $newUserPath = if ($userPath) { "$userPath;$BinDir" } else { $BinDir }
-    [Environment]::SetEnvironmentVariable("Path", $newUserPath, "User")
-    $env:Path = "$env:Path;$BinDir"
-    Write-Host "  -> Đã thêm $BinDir vào User PATH." -ForegroundColor Green
+# 8. Phơi lệnh claude-agy ra User PATH (Tự động bỏ qua nếu đang chạy trong Scoop)
+$isScoop = ($env:SCOOP_DIR -or ($TargetDir -like "*\scoop\apps\*"))
+if (-not $isScoop) {
+    Write-Host "`n[7/7] Cấu hình môi trường toàn cục (User PATH)..." -ForegroundColor Cyan
+    $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+    if (-not ($userPath -split ';' -contains $BinDir)) {
+        $newUserPath = if ($userPath) { "$userPath;$BinDir" } else { $BinDir }
+        [Environment]::SetEnvironmentVariable("Path", $newUserPath, "User")
+        $env:Path = "$env:Path;$BinDir"
+        Write-Host "  -> Đã thêm $BinDir vào User PATH." -ForegroundColor Green
+    } else {
+        Write-Host "  -> $BinDir đã tồn tại trong PATH." -ForegroundColor Green
+    }
 } else {
-    Write-Host "  -> $BinDir đã tồn tại trong PATH." -ForegroundColor Green
+    Write-Host "`n[7/7] Môi trường Scoop: Scoop shims sẽ tự động quản lý lệnh toàn cục." -ForegroundColor Green
 }
 
 # Đồng bộ token lần đầu
