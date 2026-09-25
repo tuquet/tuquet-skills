@@ -17,11 +17,11 @@ param(
 $ErrorActionPreference = "Stop"
 
 Write-Host "============================================================" -ForegroundColor Cyan
-Write-Host " 🚀 Cài đặt Claude-Agy cho Windows (Fresh PC Automated Setup)" -ForegroundColor Cyan
+Write-Host " [SETUP] Claude-Agy for Windows (Automated Setup)" -ForegroundColor Cyan
 Write-Host "============================================================" -ForegroundColor Cyan
-Write-Host "Thư mục cài đặt: $TargetDir" -ForegroundColor Yellow
+Write-Host "Target directory: $TargetDir" -ForegroundColor Yellow
 
-# 1. Tạo cấu trúc thư mục ứng dụng chuẩn
+# 1. Create directory structure
 $BinDir     = Join-Path $TargetDir "bin"
 $ConfigDir  = Join-Path $TargetDir "config"
 $DataDir    = Join-Path $TargetDir "data"
@@ -34,39 +34,39 @@ foreach ($dir in @($BinDir, $ConfigDir, $DataDir, $LogsDir, $ScriptsDir)) {
     }
 }
 
-# 2. Kiểm tra Node.js và npm
-Write-Host "`n[1/7] Kiểm tra Node.js runtime..." -ForegroundColor Cyan
+# 2. Check Node.js and npm
+Write-Host "`n[1/7] Checking Node.js runtime..." -ForegroundColor Cyan
 $nodeCmd = Get-Command node -ErrorAction SilentlyContinue
 if (-not $nodeCmd) {
-    Write-Host "  -> Node.js chưa được cài đặt." -ForegroundColor Yellow
+    Write-Host "  -> Node.js is not installed." -ForegroundColor Yellow
     $wingetCmd = Get-Command winget -ErrorAction SilentlyContinue
     if ($wingetCmd) {
-        Write-Host "  -> Đang tự động cài đặt Node.js LTS qua winget..." -ForegroundColor Green
+        Write-Host "  -> Installing Node.js LTS via winget..." -ForegroundColor Green
         Start-Process winget -ArgumentList "install OpenJS.NodeJS.LTS --silent --accept-package-agreements --accept-source-agreements" -Wait -NoNewWindow
-        # Làm mới biến môi trường PATH cho tiến trình hiện tại
+        # Refresh PATH for current process
         $machinePath = [Environment]::GetEnvironmentVariable("Path", "Machine")
         $userPath    = [Environment]::GetEnvironmentVariable("Path", "User")
         $env:Path    = "$machinePath;$userPath"
     } else {
-        Write-Host "  [CẢNH BÁO] Không tìm thấy winget. Vui lòng cài đặt Node.js LTS từ https://nodejs.org/" -ForegroundColor Red
-        Write-Host "  Sau khi cài Node.js, hãy chạy lại script này." -ForegroundColor Red
+        Write-Host "  [WARN] winget not found. Please install Node.js LTS from https://nodejs.org/" -ForegroundColor Red
+        Write-Host "  After installing Node.js, run this script again." -ForegroundColor Red
         exit 1
     }
 }
 Write-Host "  -> Node.js OK: $(node -v)" -ForegroundColor Green
 
-# 3. Cài đặt Claude Code CLI (@anthropic-ai/claude-code)
-Write-Host "`n[2/7] Kiểm tra Anthropic Claude Code CLI..." -ForegroundColor Cyan
+# 3. Check Claude Code CLI (@anthropic-ai/claude-code)
+Write-Host "`n[2/7] Checking Anthropic Claude Code CLI..." -ForegroundColor Cyan
 $claudeCmd = Get-Command claude -ErrorAction SilentlyContinue
 if (-not $claudeCmd) {
-    Write-Host "  -> Đang cài đặt @anthropic-ai/claude-code toàn cục..." -ForegroundColor Green
+    Write-Host "  -> Installing @anthropic-ai/claude-code globally..." -ForegroundColor Green
     npm install -g @anthropic-ai/claude-code
 } else {
-    Write-Host "  -> Claude Code CLI đã có sẵn." -ForegroundColor Green
+    Write-Host "  -> Claude Code CLI already available." -ForegroundColor Green
 }
 
-# 4. Tải và giải nén binary cli-proxy-api cho Windows AMD64
-Write-Host "`n[3/7] Kiểm tra CLIProxyAPI Windows binary..." -ForegroundColor Cyan
+# 4. Check CLIProxyAPI Windows binary
+Write-Host "`n[3/7] Checking CLIProxyAPI Windows binary..." -ForegroundColor Cyan
 $ProxyExe = Join-Path $BinDir "cli-proxy-api.exe"
 $rootExe  = Join-Path $TargetDir "cli-proxy-api.exe"
 if (-not (Test-Path $ProxyExe) -and (Test-Path $rootExe)) {
@@ -77,7 +77,7 @@ if (-not (Test-Path $ProxyExe)) {
     $tempZip = Join-Path $env:TEMP "CLIProxyAPI_windows.zip"
     $tempExtract = Join-Path $env:TEMP "CLIProxyAPI_extract"
     
-    Write-Host "  -> Đang tải CLIProxyAPI v$CpaVersion từ GitHub..." -ForegroundColor Green
+    Write-Host "  -> Downloading CLIProxyAPI v$CpaVersion from GitHub..." -ForegroundColor Green
     $downloaded = $false
     try {
         curl.exe -fsSL -o $tempZip $zipUrl
@@ -96,18 +96,18 @@ if (-not (Test-Path $ProxyExe)) {
     if ($extractedExe) {
         Move-Item -Path $extractedExe.FullName -Destination $ProxyExe -Force
     } else {
-        Write-Host "  [LỖI] Không tìm thấy cli-proxy-api.exe trong file zip." -ForegroundColor Red
+        Write-Host "  [ERROR] cli-proxy-api.exe not found in zip archive." -ForegroundColor Red
         exit 1
     }
     Remove-Item $tempZip -Force -ErrorAction SilentlyContinue
     Remove-Item $tempExtract -Recurse -Force -ErrorAction SilentlyContinue
-    Write-Host "  -> Đã cài đặt binary: $ProxyExe" -ForegroundColor Green
+    Write-Host "  -> Installed binary: $ProxyExe" -ForegroundColor Green
 } else {
-    Write-Host "  -> Binary cli-proxy-api.exe đã có sẵn." -ForegroundColor Green
+    Write-Host "  -> Binary cli-proxy-api.exe already available." -ForegroundColor Green
 }
 
-# 5. Khởi tạo config.yaml (KISS & YAGNI: gọn nhẹ, không alias thừa)
-Write-Host "`n[4/7] Cấu hình proxy config.yaml & settings.env..." -ForegroundColor Cyan
+# 5. Initialize config.yaml (KISS & YAGNI: minimal configuration)
+Write-Host "`n[4/7] Configuring proxy config.yaml & settings.env..." -ForegroundColor Cyan
 $yamlDataDir = $DataDir.Replace('\', '/')
 $configYaml = @"
 host: "127.0.0.1"
@@ -135,18 +135,18 @@ antigravity:
     - "API"
     - "proxy"
 "@
-Set-Content -Path (Join-Path $ConfigDir "config.yaml") -Value $configYaml -Encoding UTF8
+Set-Content -Path (Join-Path $ConfigDir "config.yaml") -Value $configYaml -Encoding ASCII
 
-# Khởi tạo settings.env
+# Initialize settings.env
 $settingsEnv = @"
 PORT=8318
 AUTO_BYPASS_PERMISSIONS=true
 DEFAULT_MODEL=claude-sonnet-4-6
 "@
-Set-Content -Path (Join-Path $ConfigDir "settings.env") -Value $settingsEnv -Encoding UTF8
+Set-Content -Path (Join-Path $ConfigDir "settings.env") -Value $settingsEnv -Encoding ASCII
 
-# 6. Khởi tạo script đồng bộ token thuần PowerShell (sync-token.ps1)
-Write-Host "`n[5/7] Thiết lập script đồng bộ token thuần PowerShell (Zero Python requirement)..." -ForegroundColor Cyan
+# 6. Initialize sync-token.ps1
+Write-Host "`n[5/7] Setting up PowerShell sync-token script..." -ForegroundColor Cyan
 $syncTokenScript = @'
 param([string]$AppDir = "$PSScriptRoot\..")
 $AppDir = [System.IO.Path]::GetFullPath($AppDir)
@@ -188,7 +188,7 @@ function Setup-ClaudeTrust() {
     try {
         $data = @{}
         if (Test-Path $claudeConfig) {
-            $raw = Get-Content $claudeConfig -Raw -Encoding UTF8
+            $raw = Get-Content $claudeConfig -Raw
             $data = $raw | ConvertFrom-Json
         }
         $ht = @{}
@@ -206,19 +206,19 @@ function Setup-ClaudeTrust() {
                 }
             }
         }
-        $ht | ConvertTo-Json -Depth 10 | Set-Content -Path $claudeConfig -Encoding UTF8
+        $ht | ConvertTo-Json -Depth 10 | Set-Content -Path $claudeConfig -Encoding ASCII
     } catch {}
 }
 
 Setup-ClaudeTrust
 
 if (-not $GeminiTokenPath) {
-    Write-Host "[INFO] Chưa tìm thấy token Antigravity tại ~/.gemini. Vui lòng đăng nhập Google Antigravity trước." -ForegroundColor Yellow
+    Write-Host "[INFO] No Antigravity token found at ~/.gemini. Please log in to Google Antigravity first." -ForegroundColor Yellow
     exit 0
 }
 
 try {
-    $geminiRaw = Get-Content $GeminiTokenPath -Raw -Encoding UTF8
+    $geminiRaw = Get-Content $GeminiTokenPath -Raw
     $geminiData = $geminiRaw | ConvertFrom-Json
     $tok = if ($geminiData.token) { $geminiData.token } else { $geminiData }
     $idTok = $geminiData.id_token
@@ -238,23 +238,23 @@ try {
         expired       = $expVal
     }
 
-    $authObj | ConvertTo-Json -Depth 5 | Set-Content -Path $AuthFile -Encoding UTF8
-    Write-Host "[OK] Đã đồng bộ Antigravity OAuth token ($email) từ $GeminiTokenPath" -ForegroundColor Green
+    $authObj | ConvertTo-Json -Depth 5 | Set-Content -Path $AuthFile -Encoding ASCII
+    Write-Host "[OK] Synced Antigravity OAuth token ($email) from $GeminiTokenPath" -ForegroundColor Green
 } catch {
-    Write-Host "[WARN] Không thể đồng bộ token: $_" -ForegroundColor Yellow
+    Write-Host "[WARN] Could not sync token: $_" -ForegroundColor Yellow
 }
 '@
-Set-Content -Path (Join-Path $ScriptsDir "sync-token.ps1") -Value $syncTokenScript -Encoding UTF8
+Set-Content -Path (Join-Path $ScriptsDir "sync-token.ps1") -Value $syncTokenScript -Encoding ASCII
 
-# 7. Khởi tạo launcher scripts: claude-agy.ps1 và claude-agy.cmd
-Write-Host "`n[6/7] Khởi tạo launcher scripts (claude-agy.ps1 & claude-agy.cmd)..." -ForegroundColor Cyan
+# 7. Initialize launcher scripts: claude-agy.ps1 and claude-agy.cmd
+Write-Host "`n[6/7] Initializing launcher scripts (claude-agy.ps1 & claude-agy.cmd)..." -ForegroundColor Cyan
 $claudeAgyPs1 = @'
 param([Parameter(ValueFromRemainingArguments = $true)][string[]]$UserArgs)
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $AppDir = [System.IO.Path]::GetFullPath((Join-Path $ScriptDir ".."))
 
-# Đồng bộ token Antigravity
+# Sync Antigravity token
 & "$AppDir\scripts\sync-token.ps1" -AppDir $AppDir | Out-Null
 
 $Port = 8318
@@ -351,7 +351,7 @@ if (-not (Test-PortOpen "127.0.0.1" $Port)) {
         Start-Sleep -Milliseconds 200
         $retries++
         if ($retries -gt 25) {
-            Write-Host ">> [LỖI] Không thể khởi động Proxy. Xem log tại $proxyLog" -ForegroundColor Red
+            Write-Host ">> [ERROR] Failed to start Proxy. Check log at $proxyLog" -ForegroundColor Red
             if ($ProxyProcess -and -not $ProxyProcess.HasExited) {
                 Stop-Process -Id $ProxyProcess.Id -Force -ErrorAction SilentlyContinue
             }
@@ -371,67 +371,67 @@ try {
 
 exit $claudeExitCode
 '@
-Set-Content -Path (Join-Path $BinDir "claude-agy.ps1") -Value $claudeAgyPs1 -Encoding UTF8
+Set-Content -Path (Join-Path $BinDir "claude-agy.ps1") -Value $claudeAgyPs1 -Encoding ASCII
 
-# Khởi tạo file cmd batch để tương thích Command Prompt, PowerShell và Git Bash
+# Create CMD batch launcher for compatibility
 $claudeAgyCmd = @'
 @echo off
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0claude-agy.ps1" %*
 '@
 Set-Content -Path (Join-Path $BinDir "claude-agy.cmd") -Value $claudeAgyCmd -Encoding ASCII
 
-# Khởi tạo script gỡ cài đặt (uninstall.ps1)
+# Initialize uninstall.ps1
 $uninstallScript = @'
 $AppDir = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
-Write-Host ">> Bắt đầu gỡ cài đặt Claude-Agy..." -ForegroundColor Cyan
+Write-Host ">> Uninstalling Claude-Agy..." -ForegroundColor Cyan
 
 Get-Process cli-proxy-api -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-Write-Host ">> Đã dừng tiến trình proxy." -ForegroundColor Green
+Write-Host ">> Stopped proxy process." -ForegroundColor Green
 
 $binPath = Join-Path $AppDir "bin"
 $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
 if ($userPath -like "*$binPath*") {
     $paths = ($userPath -split ';') | Where-Object { $_ -and $_.Trim() -ne $binPath -and $_.Trim() -ne "" }
     [Environment]::SetEnvironmentVariable("Path", ($paths -join ';'), "User")
-    Write-Host ">> Đã gỡ $binPath khỏi User PATH." -ForegroundColor Green
+    Write-Host ">> Removed $binPath from User PATH." -ForegroundColor Green
 }
 
-Write-Host ">> Đã gỡ bỏ cấu hình và PATH thành công." -ForegroundColor Green
-Write-Host ">> Để xóa toàn bộ thư mục dữ liệu, hãy chạy lệnh:" -ForegroundColor Yellow
+Write-Host ">> Successfully removed configuration and PATH." -ForegroundColor Green
+Write-Host ">> To delete data directory, run:" -ForegroundColor Yellow
 Write-Host "   Remove-Item -Recurse -Force '$AppDir'" -ForegroundColor White
 '@
-Set-Content -Path (Join-Path $ScriptsDir "uninstall.ps1") -Value $uninstallScript -Encoding UTF8
-Set-Content -Path (Join-Path $TargetDir "uninstall.ps1") -Value $uninstallScript -Encoding UTF8
+Set-Content -Path (Join-Path $ScriptsDir "uninstall.ps1") -Value $uninstallScript -Encoding ASCII
+Set-Content -Path (Join-Path $TargetDir "uninstall.ps1") -Value $uninstallScript -Encoding ASCII
 
-# 8. Phơi lệnh claude-agy ra User PATH (Tự động bỏ qua nếu đang chạy trong Scoop)
+# 8. Add claude-agy to User PATH (Skip if running inside Scoop)
 $isScoop = ($env:SCOOP_DIR -or ($TargetDir -like "*\scoop\apps\*"))
 if (-not $isScoop) {
-    Write-Host "`n[7/7] Cấu hình môi trường toàn cục (User PATH)..." -ForegroundColor Cyan
+    Write-Host "`n[7/7] Configuring User PATH..." -ForegroundColor Cyan
     $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
     if (-not ($userPath -split ';' -contains $BinDir)) {
         $newUserPath = if ($userPath) { "$userPath;$BinDir" } else { $BinDir }
         [Environment]::SetEnvironmentVariable("Path", $newUserPath, "User")
         $env:Path = "$env:Path;$BinDir"
-        Write-Host "  -> Đã thêm $BinDir vào User PATH." -ForegroundColor Green
+        Write-Host "  -> Added $BinDir to User PATH." -ForegroundColor Green
     } else {
-        Write-Host "  -> $BinDir đã tồn tại trong PATH." -ForegroundColor Green
+        Write-Host "  -> $BinDir already in PATH." -ForegroundColor Green
     }
 } else {
-    Write-Host "`n[7/7] Môi trường Scoop: Scoop shims sẽ tự động quản lý lệnh toàn cục." -ForegroundColor Green
+    Write-Host "`n[7/7] Scoop environment: Scoop shims will manage the command." -ForegroundColor Green
 }
 
-# Đồng bộ token lần đầu
-Write-Host "`n>> Thực hiện đồng bộ token Antigravity lần đầu..." -ForegroundColor Cyan
+# Initial token synchronization
+Write-Host "`n>> Initial Antigravity token synchronization..." -ForegroundColor Cyan
 & (Join-Path $ScriptsDir "sync-token.ps1") -AppDir $TargetDir
 
 Write-Host @"
 
 ============================================================
- 🎉 HOÀN TẤT CÀI ĐẶT CLAUDE-AGY TRÊN WINDOWS!
+ [SUCCESS] Claude-Agy Setup Completed on Windows!
 ============================================================
- 👉 Lệnh sử dụng: claude-agy
- 👉 Đổi Model:    Trong giao diện Claude, chỉ cần gõ /model
- 👉 Gỡ cài đặt:   & '$TargetDir\uninstall.ps1'
+ Command:   claude-agy
+ Model:     Inside Claude chat, type /model
+ Uninstall: & '$TargetDir\uninstall.ps1'
 
- * Mẹo: Mở một cửa sổ Terminal/PowerShell mới để PATH có hiệu lực ngay lập tức.
+ * Tip: Open a new Terminal/PowerShell window if PATH was updated.
 "@ -ForegroundColor Green
