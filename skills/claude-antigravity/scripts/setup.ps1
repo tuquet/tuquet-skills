@@ -74,8 +74,16 @@ if (-not (Test-Path $ProxyExe)) {
     $tempExtract = Join-Path $env:TEMP "CLIProxyAPI_extract"
     
     Write-Host "  -> Đang tải CLIProxyAPI v$CpaVersion từ GitHub..." -ForegroundColor Green
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    Invoke-WebRequest -Uri $zipUrl -OutFile $tempZip -UseBasicParsing
+    $downloaded = $false
+    try {
+        curl.exe -fsSL -o $tempZip $zipUrl
+        if ((Test-Path $tempZip) -and (Get-Item $tempZip).Length -gt 1000) { $downloaded = $true }
+    } catch {}
+
+    if (-not $downloaded) {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        Invoke-WebRequest -Uri $zipUrl -OutFile $tempZip -UseBasicParsing
+    }
     
     if (Test-Path $tempExtract) { Remove-Item $tempExtract -Recurse -Force }
     Expand-Archive -Path $tempZip -DestinationPath $tempExtract -Force
@@ -139,7 +147,18 @@ $syncTokenScript = @'
 param([string]$AppDir = "$PSScriptRoot\..")
 $AppDir = [System.IO.Path]::GetFullPath($AppDir)
 
-$GeminiTokenPath = "$env:USERPROFILE\.gemini\antigravity-cli\antigravity-oauth-token"
+$candidatePaths = @(
+    "$env:USERPROFILE\.gemini\antigravity-cli\antigravity-oauth-token",
+    "$env:USERPROFILE\.gemini\jetski-standalone-oauth-token",
+    "$env:USERPROFILE\.gemini\oauth_creds.json"
+)
+$GeminiTokenPath = $null
+foreach ($cand in $candidatePaths) {
+    if (Test-Path $cand) {
+        $GeminiTokenPath = $cand
+        break
+    }
+}
 $AuthFile = Join-Path $AppDir "data\antigravity-auth.json"
 
 function Get-JwtEmail($jwt) {
@@ -189,30 +208,34 @@ function Setup-ClaudeTrust() {
 
 Setup-ClaudeTrust
 
-if (-not (Test-Path $GeminiTokenPath)) {
-    Write-Host "[INFO] Chưa tìm thấy token Antigravity tại $GeminiTokenPath. Vui lòng đăng nhập Google Antigravity trước." -ForegroundColor Yellow
+if (-not $GeminiTokenPath) {
+    Write-Host "[INFO] Chưa tìm thấy token Antigravity tại ~/.gemini. Vui lòng đăng nhập Google Antigravity trước." -ForegroundColor Yellow
     exit 0
 }
 
 try {
     $geminiRaw = Get-Content $GeminiTokenPath -Raw -Encoding UTF8
     $geminiData = $geminiRaw | ConvertFrom-Json
-    $tok = $geminiData.token
+    $tok = if ($geminiData.token) { $geminiData.token } else { $geminiData }
     $idTok = $geminiData.id_token
     $email = Get-JwtEmail $idTok
+
+    $accTok = if ($tok.access_token) { $tok.access_token } else { $geminiData.access_token }
+    $refTok = if ($tok.refresh_token) { $tok.refresh_token } else { $geminiData.refresh_token }
+    $expVal = if ($tok.expiry) { $tok.expiry } else { $geminiData.expiry_date }
 
     $authObj = [PSCustomObject]@{
         type          = "antigravity"
         email         = $email
-        access_token  = $tok.access_token
-        refresh_token = $tok.refresh_token
+        access_token  = $accTok
+        refresh_token = $refTok
         expires_in    = 3600
         timestamp     = [int64](([DateTimeOffset]::UtcNow).ToUnixTimeMilliseconds())
-        expired       = $tok.expiry
+        expired       = $expVal
     }
 
     $authObj | ConvertTo-Json -Depth 5 | Set-Content -Path $AuthFile -Encoding UTF8
-    Write-Host "[OK] Đã đồng bộ Antigravity OAuth token ($email)" -ForegroundColor Green
+    Write-Host "[OK] Đã đồng bộ Antigravity OAuth token ($email) từ $GeminiTokenPath" -ForegroundColor Green
 } catch {
     Write-Host "[WARN] Không thể đồng bộ token: $_" -ForegroundColor Yellow
 }

@@ -42,7 +42,28 @@ Hệ thống được thiết kế tinh gọn theo nguyên tắc **KISS** (Keep 
 
 ## 🚀 Cài đặt Nhanh 1 Lệnh (One-Click Setup)
 
-### 🪟 Trên Windows 10 / 11 (Máy PC mới cài Win)
+### 🌟 Universal 1-File Setup (Khuyên Dùng: Windows, Linux, macOS)
+Sử dụng script Node.js thuần (Zero External Dependencies) để cài đặt đồng nhất trên mọi nền tảng:
+
+```bash
+# Chạy trực tiếp từ repository
+node skills/claude-antigravity/scripts/setup.mjs
+```
+
+Hoặc chạy trực tiếp qua mạng bằng 1 dòng lệnh duy nhất:
+```bash
+curl -fsSL https://raw.githubusercontent.com/tuquet/tuquet-skills/main/skills/claude-antigravity/scripts/setup.mjs | node
+```
+
+*Đặc điểm Universal Setup:*
+- **100% Native Node.js**: Tương thích hoàn toàn Windows 10/11, macOS, Linux.
+- **Dynamic Multi-Source Token Resolver**: Tự động nhận diện token từ cả Antigravity CLI (`antigravity-cli`), Antigravity IDE (`jetski-standalone-oauth-token`), và OAuth credentials (`oauth_creds.json`).
+- **Resilient Proxy & Gateway Support**: Tải binary qua `curl` / `powershell` tự động vượt qua Corporate Web Gateway & Proxy mạng doanh nghiệp.
+- **Tự động cấu hình Launcher & PATH**: Sinh binary/script launcher và phơi ra biến môi trường PATH toàn cục.
+
+---
+
+### 🪟 Trên Windows 10 / 11 (PowerShell Script)
 Mở **PowerShell** (hoặc Windows Terminal) và chạy:
 
 ```powershell

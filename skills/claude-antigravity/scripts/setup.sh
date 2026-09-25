@@ -89,15 +89,32 @@ cat << 'EOF' > "$INSTALL_DIR/scripts/sync-token.py"
 import json, os, sys, time, base64
 
 def sync_antigravity_token(app_dir):
-    gemini_token_path = os.path.expanduser("~/.gemini/antigravity-cli/antigravity-oauth-token")
+    home = os.path.expanduser("~")
+    candidates = [
+        os.path.join(home, ".gemini", "antigravity-cli", "antigravity-oauth-token"),
+        os.path.join(home, ".gemini", "jetski-standalone-oauth-token"),
+        os.path.join(home, ".gemini", "oauth_creds.json")
+    ]
     auth_file = os.path.join(app_dir, "data", "antigravity-auth.json")
-    if not os.path.exists(gemini_token_path):
+    gemini_data = None
+    source_path = None
+    for p in candidates:
+        if os.path.exists(p):
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    gemini_data = json.load(f)
+                source_path = p
+                break
+            except Exception:
+                continue
+    if not gemini_data:
         return False, "Không tìm thấy token Antigravity tại ~/.gemini"
     try:
-        with open(gemini_token_path, "r", encoding="utf-8") as f:
-            gemini_data = json.load(f)
-        tok = gemini_data.get("token", {})
+        tok = gemini_data.get("token", gemini_data)
         id_tok = gemini_data.get("id_token", "")
+        access_tok = tok.get("access_token", gemini_data.get("access_token", ""))
+        refresh_tok = tok.get("refresh_token", gemini_data.get("refresh_token", ""))
+        expiry_val = tok.get("expiry", gemini_data.get("expiry_date", ""))
         email = "user@antigravity"
         if id_tok and "." in id_tok:
             try:
@@ -108,15 +125,15 @@ def sync_antigravity_token(app_dir):
         auth_payload = {
             "type": "antigravity",
             "email": email,
-            "access_token": tok.get("access_token", ""),
-            "refresh_token": tok.get("refresh_token", ""),
+            "access_token": access_tok,
+            "refresh_token": refresh_tok,
             "expires_in": 3600,
             "timestamp": int(time.time() * 1000),
-            "expired": tok.get("expiry", "")
+            "expired": expiry_val
         }
         with open(auth_file, "w", encoding="utf-8") as f:
             json.dump(auth_payload, f, indent=2)
-        return True, email
+        return True, f"{email} (từ {source_path})"
     except Exception as e:
         return False, str(e)
 

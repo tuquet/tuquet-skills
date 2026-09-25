@@ -35,16 +35,30 @@ Các giải pháp trong kho lưu trữ này được thiết kế theo các nguy
 
 ## 🚀 Hướng dẫn Cài đặt Nhanh (1-Click Setup)
 
-### Dành cho Windows 10 / 11 (Máy PC mới cài Win)
-Mở **PowerShell** (hoặc Windows Terminal) và dán lệnh sau:
+### 🌟 Cách Tối Ưu Nhất: Universal 1-File Setup (Đa Nền Tảng: Windows, Linux, macOS)
+Do Claude Code CLI yêu cầu **Node.js (>= 18)**, bạn có thể cài đặt bằng **1 file JavaScript duy nhất** không phân biệt hệ điều hành:
 
+```bash
+# Chạy trực tiếp từ repo vừa clone
+node skills/claude-antigravity/scripts/setup.mjs
+```
+
+Hoặc cài đặt 1 lệnh trực tiếp qua mạng:
+```bash
+# Chạy được trên cả Windows (PowerShell/CMD), Linux, macOS
+curl -fsSL https://raw.githubusercontent.com/tuquet/tuquet-skills/main/skills/claude-antigravity/scripts/setup.mjs | node
+```
+
+---
+
+### 🪟 Dành cho Windows (PowerShell Script)
+Mở **PowerShell** và dán lệnh:
 ```powershell
 irm https://raw.githubusercontent.com/tuquet/tuquet-skills/main/skills/claude-antigravity/scripts/setup.ps1 | iex
 ```
 
-### Dành cho Linux / Ubuntu / Debian / WSL
-Mở terminal và dán lệnh sau:
-
+### 🐧 Dành cho Linux / Ubuntu / Debian / WSL
+Mở terminal và dán lệnh:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/tuquet/tuquet-skills/main/skills/claude-antigravity/scripts/setup.sh | bash
 ```
