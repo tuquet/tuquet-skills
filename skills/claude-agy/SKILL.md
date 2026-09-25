@@ -1,5 +1,5 @@
 ---
-name: claude-antigravity
+name: claude-agy
 description: >-
   Comprehensive guide, cheatsheet, and automated runbook for configuring and running Anthropic's Claude Code CLI with Google Antigravity OAuth (claude-agy) on Linux and Windows, bypassing Linux root permission checks (IS_SANDBOX=1), avoiding 429 RESOURCE_EXHAUSTED filters, and managing proxy lifecycles on fresh machines.
 ---
@@ -47,12 +47,12 @@ Sử dụng script Node.js thuần (Zero External Dependencies) để cài đặ
 
 ```bash
 # Chạy trực tiếp từ repository
-node skills/claude-antigravity/scripts/setup.mjs
+node skills/claude-agy/scripts/setup.mjs
 ```
 
 Hoặc chạy trực tiếp qua mạng bằng 1 dòng lệnh duy nhất:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/tuquet/tuquet-skills/main/skills/claude-antigravity/scripts/setup.mjs | node
+curl -fsSL https://raw.githubusercontent.com/tuquet/tuquet-skills/main/skills/claude-agy/scripts/setup.mjs | node
 ```
 
 *Đặc điểm Universal Setup:*
@@ -81,7 +81,7 @@ scoop install claude-agy
 Mở **PowerShell** (hoặc Windows Terminal) và chạy:
 
 ```powershell
-irm https://raw.githubusercontent.com/tuquet/tuquet-skills/main/skills/claude-antigravity/scripts/setup.ps1 | iex
+irm https://raw.githubusercontent.com/tuquet/tuquet-skills/main/skills/claude-agy/scripts/setup.ps1 | iex
 ```
 
 *Đặc điểm bộ cài Windows:*
@@ -97,7 +97,7 @@ irm https://raw.githubusercontent.com/tuquet/tuquet-skills/main/skills/claude-an
 Mở terminal và chạy:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/tuquet/tuquet-skills/main/skills/claude-antigravity/scripts/setup.sh | bash
+curl -fsSL https://raw.githubusercontent.com/tuquet/tuquet-skills/main/skills/claude-agy/scripts/setup.sh | bash
 ```
 
 *Đặc điểm bộ cài Linux:*

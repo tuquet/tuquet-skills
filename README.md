@@ -29,7 +29,7 @@ Các giải pháp trong kho lưu trữ này được thiết kế theo các nguy
 
 | Skill | Giá trị Doanh nghiệp & Tính năng Kỹ thuật | Nền tảng | Trạng thái |
 | :--- | :--- | :---: | :---: |
-| [**`claude-antigravity`**](./skills/claude-antigravity/SKILL.md) | **Cầu nối Claude Code CLI với Google Antigravity OAuth (`claude-agy`)**:<br>• Tiết kiệm chi phí API bằng Google Antigravity OAuth.<br>• Tự động bypass root permissions & trust dialog.<br>• Bộ lọc chống mã lỗi 429 quota từ Google Cloud.<br>• Quản lý vòng đời proxy thông minh (auto-kill khi thoát session).<br>• Tự động khám phá mô hình qua lệnh `/model` (chuẩn KISS & YAGNI). | 🐧 Linux<br>🪟 Windows 10/11 | ✅ Production Ready |
+| [**`claude-agy`**](./skills/claude-agy/SKILL.md) | **Cầu nối Claude Code CLI với Google Antigravity OAuth (`claude-agy`)**:<br>• Tiết kiệm chi phí API bằng Google Antigravity OAuth.<br>• Tự động bypass root permissions & trust dialog.<br>• Bộ lọc chống mã lỗi 429 quota từ Google Cloud.<br>• Quản lý vòng đời proxy thông minh (auto-kill khi thoát session).<br>• Tự động khám phá mô hình qua lệnh `/model` (chuẩn KISS & YAGNI). | 🐧 Linux<br>🪟 Windows 10/11 | ✅ Production Ready |
 
 ---
 
@@ -40,13 +40,13 @@ Do Claude Code CLI yêu cầu **Node.js (>= 18)**, bạn có thể cài đặt b
 
 ```bash
 # Chạy trực tiếp từ repo vừa clone
-node skills/claude-antigravity/scripts/setup.mjs
+node skills/claude-agy/scripts/setup.mjs
 ```
 
 Hoặc cài đặt 1 lệnh trực tiếp qua mạng:
 ```bash
 # Chạy được trên cả Windows (PowerShell/CMD), Linux, macOS
-curl -fsSL https://raw.githubusercontent.com/tuquet/tuquet-skills/main/skills/claude-antigravity/scripts/setup.mjs | node
+curl -fsSL https://raw.githubusercontent.com/tuquet/tuquet-skills/main/skills/claude-agy/scripts/setup.mjs | node
 ```
 
 ---
@@ -68,24 +68,24 @@ scoop install claude-agy
 ### 🪟 Dành cho Windows (PowerShell Script Trực Tiếp)
 Mở **PowerShell** và dán lệnh:
 ```powershell
-irm https://raw.githubusercontent.com/tuquet/tuquet-skills/main/skills/claude-antigravity/scripts/setup.ps1 | iex
+irm https://raw.githubusercontent.com/tuquet/tuquet-skills/main/skills/claude-agy/scripts/setup.ps1 | iex
 ```
 
 ### 🐧 Dành cho Linux / Ubuntu / Debian / WSL
 Mở terminal và dán lệnh:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/tuquet/tuquet-skills/main/skills/claude-antigravity/scripts/setup.sh | bash
+curl -fsSL https://raw.githubusercontent.com/tuquet/tuquet-skills/main/skills/claude-agy/scripts/setup.sh | bash
 ```
 
 ---
 
 ## 🔌 Tích hợp vào Google Antigravity (Global Skills)
 
-Để trợ lý AI Antigravity tự động nhận diện và sử dụng kỹ năng `claude-antigravity` trong mọi phiên làm việc:
+Để trợ lý AI Antigravity tự động nhận diện và sử dụng kỹ năng `claude-agy` trong mọi phiên làm việc:
 
 ```bash
 mkdir -p ~/.gemini/config/skills
-ln -sf /root/tuquet-skills/skills/claude-antigravity ~/.gemini/config/skills/claude-antigravity
+ln -sf /root/tuquet-skills/skills/claude-agy ~/.gemini/config/skills/claude-agy
 ```
 
 ---
